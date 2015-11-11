@@ -1,8 +1,10 @@
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -14,91 +16,210 @@ import dataset.Attribute;
 import dataset.Dataset;
 import parameterTuning.plotting.MathematicaListCreator;
 import utilities.DoubleCompare;
+import utilities.MersenneTwisterFast;
+import utilities.RandomSample;
+import utilities.SimpleHostLock;
 import utilities.StopWatch;
-
+enum UpdateRule {Original, AdaptedLR, OriginalWithRegularization, AdaptedLRWithRegularization}
 public class LinearRegressor {
-	public Matrix trainX;
-	public Matrix trainY;
-	public Matrix testX;
-	public Matrix testY;
-	public Matrix trainXPseduoInverse;
+	
+	public LinearRegressorDataset dataset;
+	public Matrix trainXSquaredDivideOneHalfN;
+	public Matrix trainXTransposeTimesTrainYDivideOneHalfN;
+	
 	public Matrix weightsWithoutRegularization;
-	public int[] colunIndices;
-	public Dataset dataset;
-	LinearRegressor(Dataset dataset) {
+	
+	
+	public double learningRate = -1;
+	public double lambda = -1;
+	
+	public String resultsDirectory;
+	
+	LinearRegressor(LinearRegressorDataset dataset) {
 		this.dataset = dataset;
-		trainX = convertAttributeArrayToMatrix(dataset.getTrainingInstances());
-		trainY = convertAttributeArrayToMatrix(dataset.getTrainingResponses());
-		testX = convertAttributeArrayToMatrix(dataset.getTestInstances());
-		testY = convertAttributeArrayToMatrix(dataset.getTestResponses());
-		//trainXPseduoInverse = trainX.inverse();
-		//weightsWithoutRegularization = trainXPseduoInverse.times(trainY);
-		//double trainingError = getRMSE(trainX, trainY, weightsWithoutRegularization);
-		//double testError = getRMSE(testX, testY, weightsWithoutRegularization);
-		//System.out.println(String.format("Training RMSE: %f\nTest RMSE: %f", trainingError, testError));
-		//generateErrorsByExampleCountCurve();
-		generateErrorsByExampleCountCurveMultiThread();
+		
+		// Used every time getMSEGradient is calculated
+		Matrix trainXTransposeDivideOneHalfN = dataset.trainX.transpose().timesEquals(2.0 / dataset.trainX.getRowDimension());
+		trainXSquaredDivideOneHalfN = trainXTransposeDivideOneHalfN.times(dataset.trainX);
+		trainXTransposeTimesTrainYDivideOneHalfN = trainXTransposeDivideOneHalfN.times(dataset.trainY);
+		
+		resultsDirectory = System.getProperty("user.dir") + "/results/";
+	}
+	public void setLearningRateAndLambda(double learningRate, double lambda) {
+		this.learningRate = learningRate;
+		this.lambda = lambda;
 	}
 	
-	public static Matrix getOptimalWeightsWithoutRegularization(Matrix X, Matrix Y) {
-		return X.inverse().times(Y);
+	// Error Calculations
+	private double getMSE(Matrix X, Matrix Y, Matrix w) {
+		return ExtraMatrixMethods.getSumOfSquares(X.times(w).minusEquals(Y)) / X.getRowDimension();
+	}
+	private double getRMSE(Matrix X, Matrix Y, Matrix w) {
+		return Math.sqrt(getMSE(X, Y, w));
+	}
+	private Matrix getMSEGradient(Matrix w) {
+		return trainXSquaredDivideOneHalfN.times(w).minusEquals(trainXTransposeTimesTrainYDivideOneHalfN);
 	}
 	
-	public Matrix convertAttributeArrayToMatrix(Attribute[][] array) {
-		double[][] doubleArray = new double[array.length][array[0].length+1];
-		for (int i = 0; i < array.length; i++) {
-			doubleArray[i][0] = 1;
-			for (int j = 1; j < array[0].length+1; j++) {
-				try {
-					if (!array[i][j-1].isMissingValue()) {
-						doubleArray[i][j] = array[i][j-1].getNumericValue();
-					}
-				} catch (Exception e) {
-					System.out.println();
+	private Matrix getOptimalWeightsBySolvingDerivative() {
+		return dataset.trainX.inverse().times(dataset.trainY);
+	}
+	
+	public class GradientDescentInformation {
+		public int maxIterations;
+		public Matrix initialWeights;
+		public double[] trainingErrorByIteration = new double[maxIterations];
+		public double[] validationErrorByIteration = new double[maxIterations];
+		public double[] testErrorByIteration = new double[maxIterations];
+		public Matrix[] weightsByIteration = new Matrix[maxIterations];
+		public double minTrainingError = Double.MAX_VALUE, minValidationError = Double.MAX_VALUE, minTestError = Double.MAX_VALUE,
+				maxTrainingError = Double.MIN_VALUE, maxValidationError = Double.MIN_VALUE, maxTestError = Double.MIN_VALUE;
+		public int minTrainingErrorIteration = 0, minValidationErrorIteration = 0, minTestErrorIteration = 0,
+				   maxTrainingErrorIteration = 0, maxValidationErrorIteration = 0, maxTestErrorIteration = 0;
+		
+		private String fileName = "gradientDescent.txt";
+		
+		public GradientDescentInformation(int maxIterations, Matrix initialWeights) {
+			this.maxIterations = maxIterations;
+			this.initialWeights = initialWeights;
+			
+			trainingErrorByIteration = new double[maxIterations];
+			validationErrorByIteration = new double[maxIterations];
+			testErrorByIteration = new double[maxIterations];
+			weightsByIteration = new Matrix[maxIterations];
+		}
+		
+		public void saveToFile(String directory, int maxIterations, LinearRegressorDataset dataset) {			
+			try {
+				BufferedWriter bw = new BufferedWriter(new PrintWriter(directory + fileName));
+				bw.write(String.format("MaxIterations: %d", maxIterations));
+				bw.write(String.format("NumberOfTrainingExamples: %d\n", dataset.numberOfAllTrainingExamples));
+				bw.write(String.format("NumberOfValidationExamples: %d\n", dataset.numberOfValidationExamples));
+				bw.write(String.format("NumberOfTestExamples: %d\n", dataset.numberOfTestExamples));
+				bw.write(String.format("NumberOfWeights: %d\n", dataset.numberOfPredictorsPlus1));
+				bw.write(String.format("IntialWeights: %s\n", convertWeightsToTabSeparatedString(initialWeights)));
+				bw.write(String.format("TrainingErrorMinMax: %d\t%f\t%d\t%f\n", minTrainingErrorIteration, minTrainingError, maxTrainingErrorIteration, maxTrainingError));
+				bw.write(String.format("ValidationErrorMinMax: %d\t%f\t%d\t%f\n", minValidationErrorIteration, minValidationError, maxValidationErrorIteration, maxValidationError));
+				bw.write(String.format("TestErrorMinMax: %d\t%f\t%d\t%f\n", minTestErrorIteration, minTestError, maxTestErrorIteration, maxTestError));
+				bw.write(String.format("IterationNumber\tTrainingError\tValidationError\tTestError\tWeights\n"));
+				for (int i = 0; i < maxIterations; i++) {
+					bw.write(String.format("%d\t%f\t%f\t%f\t%s\n", 
+							i, trainingErrorByIteration[i], validationErrorByIteration[i], 
+							testErrorByIteration[i], convertWeightsToTabSeparatedString(weightsByIteration[i])));
 				}
+				bw.flush();
+				bw.close();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
-		return new Matrix(doubleArray);
-	}
-	
-	public Matrix convertAttributeArrayToMatrix(Attribute[] array) {
-		double[][] doubleArray = new double[array.length][1];
-		for (int i = 0; i < array.length; i++) {
-			doubleArray[i][0] = array[i].getNumericValue();
+		
+		public String convertWeightsToTabSeparatedString(Matrix w) {
+			StringBuffer retval = new StringBuffer();
+			for (int i = 0; i < w.getRowDimension(); i++) {
+				if (i != 0) {
+					retval.append("\t");
+				}
+				retval.append(String.format("%f", w.get(i,0)));
+			}
+			return retval.toString();
 		}
-		return new Matrix(doubleArray);
-	}
-	
-	public void printDimensionsOfStuff() {
-		System.out.println("TrainX:" + trainX.getRowDimension() + " " + trainX.getColumnDimension());
-		System.out.println("TrainY:" + trainY.getRowDimension() + " " + trainY.getColumnDimension());
-		System.out.println("W:" + weightsWithoutRegularization.getRowDimension() + " " + weightsWithoutRegularization.getColumnDimension());
-		//System.out.println("Error:" + error.getRowDimension() + " " + error.getColumnDimension());
-		weightsWithoutRegularization.print(4, 2);;
-	}
-	
-	public double getTrainingRMSEWithoutRegularization(Matrix X, Matrix Y, Matrix w, int numberOfExamples) {
-		Matrix residuals = X.times(w).minusEquals(Y);
-		return Math.sqrt(residuals.transpose().times(residuals).get(0, 0) / trainX.getRowDimension());
-	}
-	
-	public static double getRMSE(Matrix X, Matrix Y, Matrix w) {
-		Matrix residuals = X.times(w).minusEquals(Y);
-		return Math.sqrt(residuals.transpose().times(residuals).get(0, 0) / X.getRowDimension());
-	}
-	
-	public double sumOfSquares(Matrix m) {
-		if (m.getColumnDimension() != 1) {
-			System.out.println("SumOFSquares only defined on vectors");
+		
+		public GradientDescentInformation(String directory) {
+			// TODO
 		}
-		double sumOfSquares = 0.0;
-		double[] elements = m.getColumnPackedCopy();
-		for (int i = 0; i < elements.length; i++) {
-			sumOfSquares += elements[i] * elements[i];
+	}
+	public String runGradientDescentAndSaveResults(int maxIterations, UpdateRule updateRule) {
+		String subDirectory = String.format("gradientDescent/%dMaxIterations/%dTrainingExamples/%s/", maxIterations, dataset.numberOfTrainingExamples, updateRule.name());
+		String directory = resultsDirectory + subDirectory;
+		new File(directory).mkdirs();
+		if (SimpleHostLock.checkDoneLock(directory + "doneLock.txt")) {
+			return subDirectory + " gradient descent completed by another host";
 		}
-		return sumOfSquares;
+		if (!SimpleHostLock.checkAndClaimHostLock(directory + "hostLock.txt")) {
+			return subDirectory + " gradient descent claimed by another host";
+		}
+		
+		Matrix w = newRandomWeights(dataset.numberOfPredictorsPlus1);
+		GradientDescentInformation info = new GradientDescentInformation(maxIterations, w);
+		for (int i = 0; i < maxIterations; i ++) {
+			switch (updateRule) {
+				case Original:
+					w = updateWeightsOriginal(w);
+					break;
+				case AdaptedLR:
+					w = updateWeightsAdaptByMagnitudeOfGradient(w);
+					break;
+				case OriginalWithRegularization:
+					w = updateWeightsWithRegularization(w);
+					break;
+				case AdaptedLRWithRegularization:
+					w = updateWeightsAdaptByMagnitudeOfGradientWithRegularization(w);
+					break;
+			}
+			
+			info.trainingErrorByIteration[i] = getRMSE(dataset.trainX, dataset.trainY, w);
+			info.validationErrorByIteration[i] = getRMSE(dataset.validX, dataset.validY, w);
+			info.testErrorByIteration[i] = getRMSE(dataset.testX, dataset.testY, w);
+			info.weightsByIteration[i] = w;
+			
+			if (DoubleCompare.lessThan(info.trainingErrorByIteration[i], info.minTrainingError)) {
+				info.minTrainingError = info.trainingErrorByIteration[i];
+				info.minTrainingErrorIteration = i;
+			}
+			if (DoubleCompare.lessThan(info.validationErrorByIteration[i], info.minValidationError)) {
+				info.minValidationError = info.validationErrorByIteration[i];
+				info.minValidationErrorIteration = i;
+			}
+			if (DoubleCompare.lessThan(info.testErrorByIteration[i], info.minTestError)) {
+				info.minTestError = info.testErrorByIteration[i];
+				info.minTestErrorIteration = i;
+			}
+			if (DoubleCompare.lessThan(info.maxTrainingError, info.trainingErrorByIteration[i])) {
+				info.maxTrainingError = info.trainingErrorByIteration[i];
+				info.maxTrainingErrorIteration = i;
+			}
+			if (DoubleCompare.greaterThan(info.validationErrorByIteration[i], info.maxValidationError)) {
+				info.maxValidationError = info.validationErrorByIteration[i];
+				info.maxValidationErrorIteration = i;
+			}
+			if (DoubleCompare.greaterThan(info.testErrorByIteration[i], info.maxTestError)) {
+				info.maxTestError = info.testErrorByIteration[i];
+				info.maxTestErrorIteration = i;
+			}
+		}
+		info.saveToFile(directory, maxIterations, dataset);
+		SimpleHostLock.writeDoneLock(directory + "doneLock.txt");
+		return subDirectory + " gradient descent completed";
 	}
 	
+	private Matrix newRandomWeights(int numberOfWeights) {
+		MersenneTwisterFast rand = new MersenneTwisterFast();
+		double[][] weights = new double[numberOfWeights][1];
+		for (int i = 0; i < numberOfWeights; i++) {
+			weights[i][0] = rand.nextDouble();
+		}
+		return new Matrix(weights);
+	}
+	
+	
+	private Matrix updateWeightsOriginal(Matrix w) {
+		return w.minus(ExtraMatrixMethods.getUnitVector(getMSEGradient(w)).times(learningRate));
+	}
+	
+	private Matrix updateWeightsAdaptByMagnitudeOfGradient(Matrix w) {
+		return w.minus(getMSEGradient(w).times(learningRate));
+	}
+	
+	private Matrix updateWeightsWithRegularization(Matrix w) {
+		return w.times(1 - 2 * learningRate * lambda / dataset.numberOfTrainingExamples).minus(ExtraMatrixMethods.getUnitVector(getMSEGradient(w)).times(learningRate));
+	}
+	
+	private Matrix updateWeightsAdaptByMagnitudeOfGradientWithRegularization(Matrix w) {
+		return w.times(1 - 2 * learningRate * lambda / dataset.numberOfTrainingExamples).minus(getMSEGradient(w).times(learningRate));
+	}
+
+	/*
 	private static class ExampleCountCallable implements Callable<Void>{
 		int firstExampleIndex = 0, lastExampleIndex = 0;
 		public static double[] trainingError;
@@ -253,4 +374,5 @@ public class LinearRegressor {
 			e.printStackTrace();
 		}
 	}
+	*/
 }
