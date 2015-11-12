@@ -1,27 +1,21 @@
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
-
-import parameterTuning.ParameterTuningParameters;
-import sun.security.util.DerInputStream;
-import utilities.StopWatch;
-import dataset.Dataset;
-import dataset.DatasetParameters;
 
 public class Main {
 	private static int NUMBER_OF_RUNS = 1;
-	
+	public static double TRAINING_SAMPLE_FRACTION = 0.8;
+	public static DatasetParameters powerPlantParameters = new DatasetParameters("powerPlant", "Power Plant", "data/PowerPlant/", "Folds5x2_pp.txt",4);
+	public static DatasetParameters nasaParameters = new DatasetParameters("nasa", "Nasa Air Foil", "data/NASAAirFoild/", "data.txt",5);
+	public static DatasetParameters bikeSharingDayParameters = new DatasetParameters("bikeSharingDay", "Bike Sharing By Day", "data/BikeSharing/", "bikeSharing.txt",11);
+	public static DatasetParameters crimeCommunitiesParameters = new DatasetParameters("crimeCommunities", "Crime Communities", "data/CrimeCommunities/", "communitiesOnlyPredictive.txt",122);
 	public static void main(String[] args) {
-		ParameterTuningParameters.nasaParameters.fileDirectory = ParameterTuningParameters.nasaParameters.fileDirectory.replace("comp520-linearRegression", "GBmWithVariableShrinkage");
-		ParameterTuningParameters.crimeCommunitiesParameters.fileDirectory = ParameterTuningParameters.crimeCommunitiesParameters.fileDirectory.replace("comp520-linearRegression", "GBmWithVariableShrinkage");
-		ParameterTuningParameters.powerPlantParameters.fileDirectory = ParameterTuningParameters.powerPlantParameters.fileDirectory.replace("comp520-linearRegression", "GBmWithVariableShrinkage");
+	
 		
-		DatasetParameters[] datasets = new DatasetParameters[] {ParameterTuningParameters.nasaParameters, ParameterTuningParameters.powerPlantParameters, ParameterTuningParameters.crimeCommunitiesParameters};
+		DatasetParameters[] datasets = new DatasetParameters[] {nasaParameters, powerPlantParameters, crimeCommunitiesParameters};
 		UpdateRule[] updateRules = new UpdateRule[] {UpdateRule.Original, UpdateRule.AdaptedLR};
 		double[] learningRates = new double[] {0.0001, 0.001, 0.01, 0.1, .5, 1};
 		double[] lambdas = new double[] {0.0, 0.1, 1, 5};
@@ -33,7 +27,7 @@ public class Main {
 		for (DatasetParameters dsParam : datasets) {
 			for (int runNumber = 0; runNumber < NUMBER_OF_RUNS; runNumber++) {
 				runTimer.start();
-				LinearRegressorDataset unpartitionedDataset = new LinearRegressorDataset(new Dataset(dsParam, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION));
+				LinearRegressorDataset unpartitionedDataset = new LinearRegressorDataset(new Dataset(dsParam, TRAINING_SAMPLE_FRACTION));
 				
 				/**
 				 * Loop from a training set with numberOfPredictorsPlus1 examples, validation set with numberOfAllTrainingExamples examples
@@ -47,7 +41,7 @@ public class Main {
 				{
 					LinearRegressor lr = new LinearRegressor( new LinearRegressorDataset(unpartitionedDataset, numberOfExamples), runNumber);
 
-					futureQueue.add(executorService.submit(new DerivativeSolverTask(lr, numberOfExamples)));
+					futureQueue.add(executorService.submit(new DerivativeSolverTask(lr, numberOfExamples, runNumber)));
 
 					for (UpdateRule updateRule : updateRules) {
 						for (double learningRate : learningRates) {

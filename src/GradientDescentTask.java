@@ -1,7 +1,5 @@
 import java.util.concurrent.Callable;
 
-import utilities.StopWatch;
-
 
 public class GradientDescentTask implements Callable<Void> {
 	GradientDescentParameters parameters;

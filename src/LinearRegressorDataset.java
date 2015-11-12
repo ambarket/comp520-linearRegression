@@ -1,8 +1,6 @@
 import java.util.Arrays;
 
-import utilities.RandomSample;
 import Jama.Matrix;
-import dataset.Dataset;
 
 
 public class LinearRegressorDataset {

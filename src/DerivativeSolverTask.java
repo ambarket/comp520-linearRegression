@@ -4,22 +4,22 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.concurrent.Callable;
 
-import utilities.SimpleHostLock;
-import utilities.StopWatch;
 import Jama.Matrix;
 
 
 public class DerivativeSolverTask implements Callable<Void> {
 	public int numberOfExamples;
 	LinearRegressor lr;
-	public DerivativeSolverTask(LinearRegressor lr, int numberOfExamples) {
+	public int runNumber;
+	public DerivativeSolverTask(LinearRegressor lr, int numberOfExamples, int runNumber) {
 		this.lr = lr;
 		this.numberOfExamples = numberOfExamples;
+		this.runNumber = runNumber;
 	}
 	public Void call() {
 		StopWatch timer = new StopWatch().start();
 		
-		String directory = String.format("%s/%s/derivativeSetToZero/%dTrainingExamples/", lr.resultsDirectory, lr.dataset.dataset.parameters.minimalName, numberOfExamples);
+		String directory = String.format("%s/%s/Run%d/derivativeSetToZero/%dTrainingExamples/", lr.resultsDirectory, lr.dataset.dataset.parameters.minimalName,runNumber,  numberOfExamples);
 		new File(directory).mkdirs();
 		if (SimpleHostLock.checkDoneLock(directory + "doneLock.txt")) {
 			timer.printMessageWithTime(String.format("[%s] Already done by another host %d training example DerivateSolver", lr.dataset.dataset.parameters.minimalName, numberOfExamples));
