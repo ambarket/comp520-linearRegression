@@ -1,3 +1,6 @@
+import java.util.Arrays;
+
+import utilities.RandomSample;
 import Jama.Matrix;
 import dataset.Dataset;
 
@@ -19,6 +22,8 @@ public class LinearRegressorDataset {
 	public Matrix testX;
 	public Matrix testY;
 	
+	public Dataset dataset;
+	
 	public LinearRegressorDataset(Dataset dataset) {
 		// Automatically adds extra column to the X matrices for the first weight
 		allTrainX = ExtraMatrixMethods.convertAttributeArrayToMatrix(dataset.getTrainingInstances());
@@ -29,28 +34,37 @@ public class LinearRegressorDataset {
 		numberOfAllTrainingExamples = allTrainX.getRowDimension();
 		numberOfPredictorsPlus1 = allTrainX.getColumnDimension();
 		numberOfTestExamples = testX.getRowDimension();
+		this.dataset = dataset;
 	}
 	
-	private LinearRegressorDataset(LinearRegressorDataset original, Matrix trainX, Matrix trainY, Matrix validX, Matrix validY) {
-		this.trainX = trainX;
-		this.trainY = trainY;
-		this.validX = validX;
-		this.validY = validY;
+	/**
+	 * Select numberOfTrainingExamples rows uniformly at random from original to use as trainX/trainY. 
+	 * The remaining examples become validX/validY.
+	 * @param original
+	 * @param numberOfTrainingExamples
+	 */
+	public LinearRegressorDataset (LinearRegressorDataset original, int numberOfTrainingExamples) {
+		this.numberOfTrainingExamples = numberOfTrainingExamples;
+		this.numberOfValidationExamples = original.numberOfAllTrainingExamples - numberOfTrainingExamples;
+		this.numberOfTestExamples = original.numberOfTestExamples;
+		this.numberOfPredictorsPlus1 = original.numberOfPredictorsPlus1;
+		this.numberOfAllTrainingExamples = original.numberOfAllTrainingExamples;
+		this.dataset = original.dataset;
+		this.allTrainX = original.allTrainX;
+		this.allTrainY = original.allTrainY;
 		this.testX = original.testX;
 		this.testY = original.testY;
-		numberOfTrainingExamples = trainX.getRowDimension();
-		numberOfValidationExamples = validX.getRowDimension();
-		numberOfTestExamples = original.numberOfTestExamples;
-		numberOfPredictorsPlus1 = original.numberOfPredictorsPlus1;
-		numberOfAllTrainingExamples = original.numberOfAllTrainingExamples;
-	}
-	
-	public LinearRegressorDataset getFirstNExamplesInDataset(int numberOfExamples) {
-		return new LinearRegressorDataset(this,
-				allTrainX.getMatrix(0, numberOfExamples-1, 0, numberOfPredictorsPlus1-1),
-				allTrainY.getMatrix(0, numberOfExamples-1, 0, 0),
-				allTrainX.getMatrix(numberOfExamples, numberOfAllTrainingExamples-1, 0, numberOfPredictorsPlus1-1),
-				allTrainY.getMatrix(numberOfExamples, numberOfAllTrainingExamples-1, 0, 0));
-				
+		
+		int[] shuffledRows = new RandomSample().fisherYatesShuffle(numberOfAllTrainingExamples);
+		int[] trainingRows = Arrays.copyOfRange(shuffledRows, 0, numberOfTrainingExamples-1);
+		int[] validationRows = Arrays.copyOfRange(shuffledRows, numberOfTrainingExamples, numberOfAllTrainingExamples-1);
+		
+		this.trainX = allTrainX.getMatrix(trainingRows, 0, original.numberOfPredictorsPlus1-1);
+		this.trainY = allTrainY.getMatrix(trainingRows, 0, 0);
+		this.validX = allTrainX.getMatrix(validationRows, 0, original.numberOfPredictorsPlus1-1);
+		this.validY = allTrainY.getMatrix(validationRows, 0, 0);
+
+		
+
 	}
 }

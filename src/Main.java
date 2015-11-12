@@ -11,10 +11,13 @@ public class Main {
 		ParameterTuningParameters.crimeCommunitiesParameters.fileDirectory = ParameterTuningParameters.crimeCommunitiesParameters.fileDirectory.replace("comp520-linearRegression", "GBmWithVariableShrinkage");
 		ParameterTuningParameters.powerPlantParameters.fileDirectory = ParameterTuningParameters.powerPlantParameters.fileDirectory.replace("comp520-linearRegression", "GBmWithVariableShrinkage");
 		
-		DatasetParameters[] datasets = new DatasetParameters[] {ParameterTuningParameters.nasaParameters, ParameterTuningParameters.powerPlantParameters, ParameterTuningParameters.crimeCommunitiesParameters};
+		DatasetParameters[] datasets = new DatasetParameters[] {/*ParameterTuningParameters.nasaParameters, */ParameterTuningParameters.powerPlantParameters, ParameterTuningParameters.crimeCommunitiesParameters};
+		UpdateRule[] updateRules = new UpdateRule[] {UpdateRule.Original, UpdateRule.AdaptedLR, UpdateRule.OriginalWithRegularization, UpdateRule.AdaptedLRWithRegularization};
+		double[] learningRates = new double[] {0.0001, 0.001, 0.01, 0.1, .5, 1};
+		double[] lambdas = new double[] {0, 0.0001, 0.001, 0.01, 0.1, .5, 1, 5};
 		for (DatasetParameters dsParam : datasets) {
 			for (int i = 0; i < NUMBER_OF_RUNS; i++) {
-				LinearRegressorDataset lrDataset = new LinearRegressorDataset(new Dataset(dsParam, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION));
+				LinearRegressorDataset unpartitionedDataset = new LinearRegressorDataset(new Dataset(dsParam, ParameterTuningParameters.TRAINING_SAMPLE_FRACTION));
 				/**
 				 * Loop from a training set with numberOfPredictorsPlus1 examples, validation set with numberOfAllTrainingExamples examples
 				 * 						set with numberOfAllTrainingExamples-1 examples, validation set with 1 example.
@@ -23,17 +26,33 @@ public class Main {
 				 */
 				StopWatch globalTimer = new StopWatch(), timer = new StopWatch();
 				globalTimer.start();
-				for (int numberOfExamples = lrDataset.numberOfPredictorsPlus1; numberOfExamples < lrDataset.numberOfAllTrainingExamples-1; numberOfExamples++) {
+				for (int numberOfExamples = unpartitionedDataset.numberOfPredictorsPlus1+1; 
+						numberOfExamples < unpartitionedDataset.numberOfAllTrainingExamples-1; 
+						numberOfExamples++) 
+				{
+					LinearRegressorDataset lrDataset = new LinearRegressorDataset(unpartitionedDataset, numberOfExamples);
+					LinearRegressor lr = new LinearRegressor(lrDataset);
 					timer.start();
-					LinearRegressor lr = new LinearRegressor(lrDataset.getFirstNExamplesInDataset(numberOfExamples));
-					lr.setLearningRateAndLambda(0.001, 0.1);
-					String message = lr.runGradientDescentAndSaveResults(100000, UpdateRule.AdaptedLR);
+					String message = lr.calculateAndSaveOptimalWeightsBySolvingDerivative();
 					timer.printMessageWithTime(String.format("[%s] " + message, dsParam.minimalName));
+					for (UpdateRule updateRule : updateRules) {
+						for (double learningRate : learningRates) {
+							if (updateRule == UpdateRule.AdaptedLRWithRegularization || updateRule == UpdateRule.OriginalWithRegularization) {
+								for (double lambda : lambdas) {
+									timer.start();
+									message = lr.runGradientDescentAndSaveResults(100000, updateRule, learningRate, lambda);
+									timer.printMessageWithTime(String.format("[%s] " + message, dsParam.minimalName));
+								}
+							} else {
+								timer.start();
+								message = lr.runGradientDescentAndSaveResults(100000, updateRule, learningRate, 0);
+								timer.printMessageWithTime(String.format("[%s] " + message, dsParam.minimalName));
+							}
+						}
+					}
 				}
 				globalTimer.printMessageWithTime("Looped through all parameters");
-				
 			}
-
 		}
 	}
 }
