@@ -13,7 +13,7 @@ public class LinearRegressor {
 	
 	public Matrix weightsWithoutRegularization;
 	
-	public String resultsDirectory;
+	public static String resultsDirectory = System.getProperty("user.dir") + "/results/";
 	
 	public LinearRegressor(LinearRegressorDataset lrDataset, int runNumber) {
 		this.dataset = lrDataset;
@@ -22,8 +22,6 @@ public class LinearRegressor {
 		Matrix trainXTransposeDivideOneHalfN = lrDataset.trainX.transpose().timesEquals(2.0 / lrDataset.trainX.getRowDimension());
 		trainXSquaredDivideOneHalfN = trainXTransposeDivideOneHalfN.times(lrDataset.trainX);
 		trainXTransposeTimesTrainYDivideOneHalfN = trainXTransposeDivideOneHalfN.times(lrDataset.trainY);
-		
-		resultsDirectory = System.getProperty("user.dir") + "/results/";
 	}
 	
 	// Error Calculations
