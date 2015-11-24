@@ -1,5 +1,5 @@
-
-
+package dataset;
+import utilities.DoubleCompare;
 
 public class Attribute implements Comparable<Attribute> {
 	public enum Type {Numeric, Categorical};

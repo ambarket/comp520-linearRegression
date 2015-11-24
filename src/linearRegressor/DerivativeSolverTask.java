@@ -1,3 +1,4 @@
+package linearRegressor;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -7,6 +8,10 @@ import java.io.PrintWriter;
 import java.util.concurrent.Callable;
 
 import Jama.Matrix;
+import dataset.DatasetParameters;
+import utilities.ExtraMatrixMethods;
+import utilities.SimpleHostLock;
+import utilities.StopWatch;
 
 
 public class DerivativeSolverTask implements Callable<Void> {
@@ -21,7 +26,7 @@ public class DerivativeSolverTask implements Callable<Void> {
 	public Void call() {
 		StopWatch timer = new StopWatch().start();
 		
-		String directory = String.format("%s/%s/Run%d/derivativeSetToZero/%dTrainingExamples/", LinearRegressor.resultsDirectory, lr.dataset.dataset.parameters.minimalName,runNumber,  numberOfExamples);
+		String directory = String.format("%s/%s/Run%d/derivativeSetToZero/%dTrainingExamples/", Main.RESULTS_DIRECTORY, lr.dataset.dataset.parameters.minimalName,runNumber,  numberOfExamples);
 		new File(directory).mkdirs();
 		if (SimpleHostLock.checkDoneLock(directory + "doneLock.txt")) {
 			timer.printMessageWithTime(String.format("[%s] [Run %d] Already done by another host %d training example DerivateSolver", lr.dataset.dataset.parameters.minimalName, runNumber, numberOfExamples));
@@ -38,7 +43,7 @@ public class DerivativeSolverTask implements Callable<Void> {
 
 		try {
 			BufferedWriter bw = new BufferedWriter(new PrintWriter(directory + numberOfExamples + "TrainingExamples-optimalWeightsBySolvingDerivative.txt"));
-			bw.write(String.format("Weights: %s\n", LinearRegressor.convertWeightsToTabSeparatedString(w)));
+			bw.write(String.format("Weights: %s\n", ExtraMatrixMethods.convertWeightsToTabSeparatedString(w)));
 			bw.write(String.format("TrainingRMSE: %f\n", lr.getRMSE(lr.dataset.trainX, lr.dataset.trainY, w)));
 			bw.write(String.format("ValidationRMSE: %f\n", lr.getRMSE(lr.dataset.validX, lr.dataset.validY, w)));
 			bw.write(String.format("TestRMSE: %f\n", lr.getRMSE(lr.dataset.testX, lr.dataset.testY, w)));
@@ -54,7 +59,7 @@ public class DerivativeSolverTask implements Callable<Void> {
 	}
 	
 	public static DerivateSolverResult readOptimalWeightsBySolvingDerivate(DatasetParameters datasetParams, int numberOfExamples, int runNumber) {
-		String directory = String.format("%s/%s/Run%d/derivativeSetToZero/%dTrainingExamples/", LinearRegressor.resultsDirectory, datasetParams.minimalName,runNumber,  numberOfExamples);
+		String directory = String.format("%s/%s/Run%d/derivativeSetToZero/%dTrainingExamples/", Main.RESULTS_DIRECTORY, datasetParams.minimalName,runNumber,  numberOfExamples);
 		BufferedReader br;
 		DerivateSolverResult result = new DerivateSolverResult();
 		try {

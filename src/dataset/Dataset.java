@@ -1,3 +1,4 @@
+package dataset;
 
 
 import java.util.AbstractMap;
@@ -8,6 +9,11 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+
+import dataset.Attribute.Type;
+import utilities.RandomSample;
+import utilities.RawFile;
+import utilities.StopWatch;
 
 public class Dataset {
 	public static HashSet<String> formsOfMissingValue = new HashSet<String>(Arrays.asList("NA", "N/A", "?", "NULL"));

@@ -1,3 +1,4 @@
+package linearRegressor;
 import java.io.BufferedWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -8,7 +9,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import dataset.Dataset;
+import dataset.DatasetParameters;
+import dataset.LinearRegressorDataset;
+import utilities.DoubleCompare;
+import utilities.MathematicaListCreator;
+import utilities.RandomSample;
+import utilities.StopWatch;
+
 public class Main {
+	public static String RESULTS_DIRECTORY = System.getProperty("user.dir") + "/results/";
+	
 	private static int NUMBER_OF_RUNS = 10;
 	public static double TRAINING_SAMPLE_FRACTION = 0.8;
 	public static DatasetParameters powerPlantParameters = new DatasetParameters("powerPlant", "Power Plant", "data/PowerPlant/", "Folds5x2_pp.txt",4);
@@ -16,10 +27,10 @@ public class Main {
 	public static DatasetParameters bikeSharingDayParameters = new DatasetParameters("bikeSharingDay", "Bike Sharing By Day", "data/BikeSharing/", "bikeSharing.txt",11);
 	public static DatasetParameters crimeCommunitiesParameters = new DatasetParameters("crimeCommunities", "Crime Communities", "data/CrimeCommunities/", "communitiesOnlyPredictive.txt",122);
 	
-	public static DatasetParameters[] datasets = new DatasetParameters[] {nasaParameters, powerPlantParameters, crimeCommunitiesParameters};
+	public static DatasetParameters[] datasets = new DatasetParameters[] {/*nasaParameters, */powerPlantParameters /*, crimeCommunitiesParameters*/};
 	public static UpdateRule[] updateRules = new UpdateRule[] {UpdateRule.Original, UpdateRule.AdaptedLR};
-	public static double[] learningRates = new double[] {0.0001, 0.001, 0.01, 0.1, .5, 1};
-	public static double[] lambdas = new double[] {0.0, 0.1, 1, 5};
+	public static double[] learningRates = new double[] {/*0.0001, 0.001, 0.01, 0.1, .5, 1*/ 0.5};
+	public static double[] lambdas = new double[] {0.0, 0.05, 0.1, 0.5, 1, 5};
 	public static int maxNumberOfIterations = 1000000;
 	
 	public static ExecutorService executorService = Executors.newFixedThreadPool(3);
@@ -28,7 +39,8 @@ public class Main {
 	
 	public static void main(String[] args) {
 		//generateLearningCurveForDerivativeSolvers();
-		generateRunData();
+		//generateRunData();
+		generateGradientDescentRunData();
 	}
 	
 	public static void generateRunData() {
@@ -46,16 +58,6 @@ public class Main {
 
 					futureQueue.add(executorService.submit(new DerivativeSolverTask(lr, numberOfExamples, runNumber)));
 
-					/*
-					for (UpdateRule updateRule : updateRules) {
-						for (double learningRate : learningRates) {
-							for (double lambda : lambdas) {
-								futureQueue.add(executorService.submit(new GradientDescentTask(new GradientDescentParameters(runNumber, lr, maxNumberOfIterations, updateRule, learningRate, lambda))));
-							}
-						}
-					}
-					*/
-					
 					if (futureQueue.size() > 8) {
 						while (futureQueue.size() > 4) {
 							try {
@@ -69,6 +71,130 @@ public class Main {
 					}
 					
 				}				
+				runTimer.printMessageWithTime("Finished run " + runNumber);
+			}
+			while (!futureQueue.isEmpty()) {
+				try {
+					futureQueue.poll().get();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				} catch (ExecutionException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	final static double VALIDATION_SAMPLE_FRACTION = 0.25;
+	public static void generateGradientDescentRunData() {
+		
+		StopWatch runTimer = new StopWatch();
+		for (DatasetParameters dsParam : datasets) {
+			for (int runNumber = 0; runNumber < NUMBER_OF_RUNS; runNumber++) {
+				runTimer.start();
+				LinearRegressorDataset unpartitionedDataset = new LinearRegressorDataset(new Dataset(dsParam, TRAINING_SAMPLE_FRACTION));
+				int tmp = (int)(unpartitionedDataset.numberOfAllTrainingExamples * (1 - VALIDATION_SAMPLE_FRACTION));
+				LinearRegressor lr = new LinearRegressor( new LinearRegressorDataset(unpartitionedDataset, tmp), runNumber); // train without validation set
+				
+				for (UpdateRule updateRule : updateRules) {
+					for (double learningRate : learningRates) {
+						for (double lambda : lambdas) {
+							futureQueue.add(executorService.submit(
+									new GradientDescentTask(lr,
+											new GradientDescentParameters(runNumber, 
+													"StandardValidation",
+													lr.dataset, 
+													maxNumberOfIterations, 
+													updateRule, 
+													learningRate, 
+													lambda)
+											)
+									)
+								);
+						}
+					}
+				}
+				
+				while (futureQueue.size() > 4) {
+					try {
+						futureQueue.poll().get();
+					} catch (InterruptedException | ExecutionException e) {
+						e.printStackTrace();
+						System.exit(1);
+					} 
+				}
+							
+				runTimer.printMessageWithTime("Finished run " + runNumber);
+			}
+			while (!futureQueue.isEmpty()) {
+				try {
+					futureQueue.poll().get();
+				} catch (InterruptedException | ExecutionException e) {
+					e.printStackTrace();
+					System.exit(1);
+				} 
+			}
+		}
+	}
+	final static int NUMBER_OF_FOLDS = 5;
+	public static void generateGradientDescentRunDataCrossValidation() {
+		
+		StopWatch runTimer = new StopWatch();
+		for (DatasetParameters dsParam : datasets) {
+			for (int runNumber = 0; runNumber < NUMBER_OF_RUNS; runNumber++) {
+				runTimer.start();
+				LinearRegressorDataset unpartitionedDataset = new LinearRegressorDataset(new Dataset(dsParam, TRAINING_SAMPLE_FRACTION));
+				LinearRegressor[] foldsPlusUnpartitionedModels = new LinearRegressor[NUMBER_OF_FOLDS+1];
+				foldsPlusUnpartitionedModels[NUMBER_OF_FOLDS] = new LinearRegressor( unpartitionedDataset, runNumber); // train without validation set
+				
+				// Partition the data set into k folds. All done with boolean index masks into the original dataset
+				int[] shuffledIndices = (new RandomSample()).fisherYatesShuffle(unpartitionedDataset.numberOfAllTrainingExamples);
+				int foldSize = shuffledIndices.length / NUMBER_OF_FOLDS;
+				boolean[][] trainingInEachFold = new boolean[NUMBER_OF_FOLDS+1][shuffledIndices.length];
+				int numberOfTrainingExamplesInEachModel = ((NUMBER_OF_FOLDS-1)*foldSize);
+				for (int i = 0; i < NUMBER_OF_FOLDS; i++) {
+					int first = i * foldSize, last = (i * foldSize) + (numberOfTrainingExamplesInEachModel);
+					for (int j = first; j < last; j++) {
+						int safeIndex = j % shuffledIndices.length;
+						trainingInEachFold[i][shuffledIndices[safeIndex]] = true;
+					}
+					foldsPlusUnpartitionedModels[i] = new LinearRegressor(new LinearRegressorDataset(unpartitionedDataset, trainingInEachFold[i], numberOfTrainingExamplesInEachModel), runNumber);
+				}
+
+				for (UpdateRule updateRule : updateRules) {
+					for (double learningRate : learningRates) {
+						for (double lambda : lambdas) {
+							for (int i = 0; i < NUMBER_OF_FOLDS+1; i++) {
+								String foldId = (i < NUMBER_OF_FOLDS) ? "Fold" + i : "AllTrainingData";
+								futureQueue.add(executorService.submit(
+										new GradientDescentTask(foldsPlusUnpartitionedModels[i],
+												new GradientDescentParameters(runNumber, 
+														foldId,
+														foldsPlusUnpartitionedModels[i].dataset, 
+														maxNumberOfIterations, 
+														updateRule, 
+														learningRate, 
+														lambda)
+												)
+										)
+									);
+							}
+						}
+					}
+				}
+				
+				if (futureQueue.size() > 8) {
+					while (futureQueue.size() > 4) {
+						try {
+							futureQueue.poll().get();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						} catch (ExecutionException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+							
 				runTimer.printMessageWithTime("Finished run " + runNumber);
 			}
 			while (!futureQueue.isEmpty()) {
@@ -141,7 +267,7 @@ public class Main {
 			optimalValidationErrorIteration += unpartitionedDataset.numberOfPredictorsPlus1+1;
 			String optimalValidationErrorList = "{{" + optimalValidationErrorIteration + ", 0}, {" + optimalValidationErrorIteration + ", " + maxRMSE + "}}";
 			
-			String directory = String.format("%s/%s/", LinearRegressor.resultsDirectory, dsParam.minimalName);
+			String directory = String.format("%s/%s/", Main.RESULTS_DIRECTORY, dsParam.minimalName);
 			
 			String imageFileNameNoExtension = "derivateSetToZeroLearningCurve";
 			try {
