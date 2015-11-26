@@ -18,6 +18,13 @@ public class SimpleHostLock {
 				BufferedReader br = new BufferedReader(new FileReader(hostLock));
 				String hostName = br.readLine();
 				br.close();
+				if (hostName == null) {
+					BufferedWriter bw = new BufferedWriter(new PrintWriter(hostLock));
+					bw.write(InetAddress.getLocalHost().getHostName() + "\n");
+					bw.flush();
+					bw.close();
+					return true;
+				}
 				return (hostName).equals(InetAddress.getLocalHost().getHostName());
 			} catch (FileNotFoundException e) {
 				System.out.println("Host lock file exists but file not found. Makes no sense.");

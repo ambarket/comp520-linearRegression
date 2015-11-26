@@ -58,10 +58,11 @@ public class DerivativeSolverTask implements Callable<Void> {
 		return null;
 	}
 	
-	public static DerivateSolverResult readOptimalWeightsBySolvingDerivate(DatasetParameters datasetParams, int numberOfExamples, int runNumber) {
+	public static LearningCurveEntry readOptimalWeightsBySolvingDerivate(DatasetParameters datasetParams, int numberOfExamples, int runNumber) {
 		String directory = String.format("%s/%s/Run%d/derivativeSetToZero/%dTrainingExamples/", Main.RESULTS_DIRECTORY, datasetParams.minimalName,runNumber,  numberOfExamples);
 		BufferedReader br;
-		DerivateSolverResult result = new DerivateSolverResult();
+		LearningCurveEntry result = new LearningCurveEntry();
+		result.numberOfTrainingExamples = numberOfExamples;
 		try {
 			br = new BufferedReader(new FileReader(directory + numberOfExamples + "TrainingExamples-optimalWeightsBySolvingDerivative.txt"));
 			br.readLine();
@@ -76,8 +77,4 @@ public class DerivativeSolverTask implements Callable<Void> {
 		return result;
 	}
 }
- class DerivateSolverResult {
-	public double trainingError;
-	public double validationError;
-	public double testError;
-}
+

@@ -2,24 +2,23 @@ package linearRegressor;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import Jama.Matrix;
+import utilities.DoubleCompare;
 import utilities.ExtraMatrixMethods;
+import Jama.Matrix;
 
-public class GradientDescentSummary {
+public class GradientDescentSummary implements Comparable<GradientDescentSummary> {
 	public GradientDescentParameters parameters;
 	public String directory; 
 	
 	public GradientDescentSummary(GradientDescentParameters parameters) {
-		this(parameters, false);
-	}
-	
-	public GradientDescentSummary(GradientDescentParameters parameters, boolean averages) {
 		this.parameters = parameters;
-		this.directory = Main.RESULTS_DIRECTORY + ((averages) ? "Averages/" : "") + parameters.subDirectory;
+		this.directory = Main.RESULTS_DIRECTORY + parameters.subDirectory;
+		new File(this.directory).mkdirs();
 	}
 	
 	public Matrix initialWeights;
@@ -27,13 +26,20 @@ public class GradientDescentSummary {
 			maxTrainingError = Double.MIN_VALUE, maxValidationError = Double.MIN_VALUE, maxTestError = Double.MIN_VALUE,
 			minTrainingErrorIteration = 0, minValidationErrorIteration = 0, minTestErrorIteration = 0,
 			maxTrainingErrorIteration = 0, maxValidationErrorIteration = 0, maxTestErrorIteration = 0,
+			minGradientMagnitude = Double.MAX_VALUE, minGradientMagnitudeIteration = 0,
+			maxGradientMagnitude = Double.MIN_VALUE, maxGradientMagnitudeIteration = 0,
 			actualNumberOfIterations = 0, minimumIterationsAllRunsShare = 0;
+	
+	public double trainingStoppingIteration = -1, validationStoppingIteration = -1, gradientStoppingIteration = -1,
+			trainingStoppingTrainingError = -1, validationStoppingTrainingError  = -1, gradientStoppingTrainingError  = -1,
+			trainingStoppingValidationError = -1, validationStoppingValidationError = -1, gradientStoppingValidationError = -1,
+			trainingStoppingTestError = -1, validationStoppingTestError = -1, gradientStoppingTestError = -1;
 	
 	private String fileName = "summary.txt";
 	
-	public static GradientDescentSummary averageSummary(GradientDescentSummary... summaries) {
+	public static GradientDescentSummary averageSummary(GradientDescentParameters parameters, GradientDescentSummary... summaries) {
 		
-		GradientDescentSummary retval = new GradientDescentSummary(summaries[0].parameters, true);
+		GradientDescentSummary retval = new GradientDescentSummary(parameters);
 		retval.initialWeights =  new Matrix(summaries[0].initialWeights.getRowDimension(), summaries[0].initialWeights.getColumnDimension());
 		for (GradientDescentSummary summary : summaries) {
 			retval.minTrainingError += summary.minTrainingError;
@@ -49,6 +55,27 @@ public class GradientDescentSummary {
 			retval.maxTestError += summary.maxValidationError;
 			retval.maxTestErrorIteration += summary.maxTestErrorIteration;
 			retval.actualNumberOfIterations += summary.actualNumberOfIterations;
+			retval.minGradientMagnitude += summary.minGradientMagnitude;
+			retval.minGradientMagnitudeIteration += summary.minGradientMagnitudeIteration;
+			retval.maxGradientMagnitude += summary.maxGradientMagnitude;
+			retval.maxGradientMagnitudeIteration += summary.maxGradientMagnitudeIteration;
+			
+			retval.trainingStoppingIteration += summary.trainingStoppingIteration;
+			retval.validationStoppingIteration += summary.validationStoppingIteration;
+			retval.gradientStoppingIteration += summary.gradientStoppingIteration;
+			
+			retval.trainingStoppingTrainingError += summary.trainingStoppingTrainingError;
+			retval.validationStoppingTrainingError += summary.validationStoppingTrainingError;
+			retval.gradientStoppingTrainingError += summary.gradientStoppingTrainingError;
+			
+			retval.trainingStoppingValidationError += summary.trainingStoppingValidationError;
+			retval.validationStoppingValidationError += summary.validationStoppingValidationError;
+			retval.gradientStoppingValidationError += summary.gradientStoppingValidationError;
+			
+			retval.trainingStoppingTestError += summary.trainingStoppingTestError;
+			retval.validationStoppingTestError += summary.validationStoppingTestError;
+			retval.gradientStoppingTestError += summary.gradientStoppingTestError;
+			
 			if (summary.actualNumberOfIterations < retval.minimumIterationsAllRunsShare) {
 				retval.minimumIterationsAllRunsShare = summary.actualNumberOfIterations;
 			}
@@ -67,6 +94,26 @@ public class GradientDescentSummary {
 		retval.maxTestError /= summaries.length;
 		retval.maxTestErrorIteration /= summaries.length;
 		retval.actualNumberOfIterations /= summaries.length;
+		retval.minGradientMagnitude /= summaries.length;
+		retval.minGradientMagnitudeIteration /= summaries.length;
+		retval.maxGradientMagnitude /= summaries.length;
+		retval.maxGradientMagnitudeIteration /= summaries.length;
+		retval.trainingStoppingIteration /= summaries.length;
+		retval.validationStoppingIteration /= summaries.length;
+		retval.gradientStoppingIteration /= summaries.length;
+		
+		retval.trainingStoppingTrainingError /= summaries.length;
+		retval.validationStoppingTrainingError /= summaries.length;
+		retval.gradientStoppingTrainingError /= summaries.length;
+		
+		retval.trainingStoppingValidationError /= summaries.length;
+		retval.validationStoppingValidationError /= summaries.length;
+		retval.gradientStoppingValidationError /= summaries.length;
+		
+		retval.trainingStoppingTestError /= summaries.length;
+		retval.validationStoppingTestError /= summaries.length;
+		retval.gradientStoppingTestError /= summaries.length;
+		
 		retval.initialWeights = retval.initialWeights.timesEquals(1.0 / summaries.length);
 		return retval;
 	}
@@ -82,6 +129,12 @@ public class GradientDescentSummary {
 			bw.write(String.format("ValidationRMSEMax: %.2f\t%f\n", maxValidationErrorIteration, maxValidationError));
 			bw.write(String.format("TestRMSEMin: %.2f\t%f\n", minTestErrorIteration, minTestError));
 			bw.write(String.format("TestRMSEMax: %.2f\t%f\n", maxTestErrorIteration, maxTestError));
+			bw.write(String.format("GradientMagnitudeMin: %.2f\t%f\n", minGradientMagnitudeIteration, minGradientMagnitude));
+			bw.write(String.format("GradientMagnitudeMax: %.2f\t%f\n", maxGradientMagnitudeIteration, maxGradientMagnitude));
+			bw.write(String.format("TrainingStopping(iter train valid test): %.2f\t%f\t%f\t%f\n", trainingStoppingIteration, trainingStoppingTrainingError, trainingStoppingValidationError, trainingStoppingTestError));
+			bw.write(String.format("ValidationStopping(iter train valid test): %.2f\t%f\t%f\t%f\n", validationStoppingIteration, validationStoppingTrainingError, validationStoppingValidationError, validationStoppingTestError));
+			bw.write(String.format("GradientStopping(iter train valid test): %.2f\t%f\t%f\t%f\n", gradientStoppingIteration, gradientStoppingTrainingError, gradientStoppingValidationError, gradientStoppingTestError));
+
 			bw.write(String.format("IntialWeights: %s\n", ExtraMatrixMethods.convertWeightsToTabSeparatedString(initialWeights)));
 
 			bw.flush();
@@ -91,8 +144,37 @@ public class GradientDescentSummary {
 		}
 	}
 	
-	public static GradientDescentSummary readFromFile(GradientDescentParameters parameters, boolean averages) {			
-		GradientDescentSummary retval = new GradientDescentSummary(parameters, averages);
+	public static void writeSortedSummaryRecordHeader(BufferedWriter bw) throws IOException {
+		bw.write(String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", 
+				GradientDescentParameters.getTabSeparatedMinimalPrintoutHeader(),
+				"minValidationError", 
+				"minTestError", 
+				"minTrainingError", 
+				"minValidationErrorIteration", 
+				"minTestErrorIteration", 
+				"minTrainingErrorIteration", 
+				"validationStoppingIteration", 
+				"gradientStoppingIteration", 
+				"trainingStoppingIteration"
+				));
+	}
+	public void writeSortedSummaryRecord(BufferedWriter bw) throws IOException {	
+		bw.write(String.format("%s\t%f\t%f\t%f\t%.0f\t%.0f\t%.0f\t%.0f\t%.0f\t%.0f\n", 
+				parameters.getTabSeparatedMinimalPrintout(),
+				minValidationError, 
+				minTestError, 
+				minTrainingError, 
+				minValidationErrorIteration, 
+				minTestErrorIteration, 
+				minTrainingErrorIteration, 
+				validationStoppingIteration, 
+				gradientStoppingIteration, 
+				trainingStoppingIteration
+				));
+	}
+	
+	public static GradientDescentSummary readFromFile(GradientDescentParameters parameters) {			
+		GradientDescentSummary retval = new GradientDescentSummary(parameters);
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(retval.directory + retval.fileName));
 			String line;
@@ -100,28 +182,49 @@ public class GradientDescentSummary {
 			
 			retval.actualNumberOfIterations = Double.parseDouble(line.split(": ")[1]);
 			
-			String[] components = br.readLine().split(": ");
-			retval.minTrainingErrorIteration = Double.parseDouble(components[1]);
-			retval.minTrainingError = Double.parseDouble(components[2]);
-			components = br.readLine().split(": ");
-			retval.maxTrainingErrorIteration = Double.parseDouble(components[1]);
-			retval.maxTrainingError = Double.parseDouble(components[2]);
-			components = br.readLine().split(": ");
-			retval.minValidationErrorIteration = Double.parseDouble(components[1]);
-			retval.minValidationError = Double.parseDouble(components[2]);
-			components = br.readLine().split(": ");
-			retval.maxValidationErrorIteration = Double.parseDouble(components[1]);
-			retval.maxValidationError = Double.parseDouble(components[2]);
-			components = br.readLine().split(": ");
-			retval.minTestErrorIteration = Double.parseDouble(components[1]);
-			retval.minTestError = Double.parseDouble(components[2]);
-			components = br.readLine().split(": ");
-			retval.maxTestErrorIteration = Double.parseDouble(components[1]);
-			retval.maxTestError = Double.parseDouble(components[2]);
+			String[] components = br.readLine().split(": ")[1].split("\t");
+			retval.minTrainingErrorIteration = Double.parseDouble(components[0]);
+			retval.minTrainingError = Double.parseDouble(components[1]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.maxTrainingErrorIteration = Double.parseDouble(components[0]);
+			retval.maxTrainingError = Double.parseDouble(components[1]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.minValidationErrorIteration = Double.parseDouble(components[0]);
+			retval.minValidationError = Double.parseDouble(components[1]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.maxValidationErrorIteration = Double.parseDouble(components[0]);
+			retval.maxValidationError = Double.parseDouble(components[1]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.minTestErrorIteration = Double.parseDouble(components[0]);
+			retval.minTestError = Double.parseDouble(components[1]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.maxTestErrorIteration = Double.parseDouble(components[0]);
+			retval.maxTestError = Double.parseDouble(components[1]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.minGradientMagnitudeIteration = Double.parseDouble(components[0]);
+			retval.minGradientMagnitude = Double.parseDouble(components[1]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.maxGradientMagnitudeIteration = Double.parseDouble(components[0]);
+			retval.maxGradientMagnitude = Double.parseDouble(components[1]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.trainingStoppingIteration = Double.parseDouble(components[0]);
+			retval.trainingStoppingTrainingError = Double.parseDouble(components[1]);
+			retval.trainingStoppingValidationError = Double.parseDouble(components[2]);
+			retval.trainingStoppingTestError = Double.parseDouble(components[3]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.validationStoppingIteration = Double.parseDouble(components[0]);
+			retval.validationStoppingTrainingError = Double.parseDouble(components[1]);
+			retval.validationStoppingValidationError = Double.parseDouble(components[2]);
+			retval.validationStoppingTestError = Double.parseDouble(components[3]);
+			components = br.readLine().split(": ")[1].split("\t");
+			retval.gradientStoppingIteration = Double.parseDouble(components[0]);
+			retval.gradientStoppingTrainingError = Double.parseDouble(components[1]);
+			retval.gradientStoppingValidationError = Double.parseDouble(components[2]);
+			retval.gradientStoppingTestError = Double.parseDouble(components[3]);
 			double[] initialWeights = new double[parameters.dataset.numberOfPredictorsPlus1];
-			String[] initialWeightsLine = br.readLine().split(": ");
+			String[] initialWeightsLine = br.readLine().split(": ")[1].split("\t");
 			for (int i = 0; i < initialWeights.length; i++) {
-				initialWeights[i] = Double.parseDouble(initialWeightsLine[i+1]);
+				initialWeights[i] = Double.parseDouble(initialWeightsLine[i]);
 			}
 			br.close();
 		} catch (IOException e) {
@@ -129,5 +232,10 @@ public class GradientDescentSummary {
 			System.exit(1);
 		}
 		return retval;
+	}
+
+	@Override
+	public int compareTo(GradientDescentSummary arg0) {
+		return DoubleCompare.compare(this.minValidationError, arg0.minValidationError);
 	}
 }

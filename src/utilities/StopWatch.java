@@ -1,5 +1,9 @@
 package utilities;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+
 public class StopWatch {
 
     double startTime, endTime;
@@ -45,7 +49,12 @@ public class StopWatch {
 	}
 	
 	public void printMessageWithTime(String message) {
-		System.out.println(generateMessageWithTime(message));
+		System.out.println(StopWatch.getDateTimeStamp() + generateMessageWithTime(message));
+	}
+	
+	public String getTimeInMostAppropriateUnit() {
+		Unit u = determineMostAppropriateUnit();
+		return getTimeInUnit(u) + " " + u.name();
 	}
 	
 	public Unit determineMostAppropriateUnit() {
@@ -82,6 +91,13 @@ public class StopWatch {
 				return getElapsedHours();
 		}
 		throw new IllegalArgumentException();
+	}
+	
+	private static DateFormat df = new SimpleDateFormat("MM/dd HH:mm:ss");
+	private static Calendar start = Calendar.getInstance();
+	public  static String getDateTimeStamp() {
+	    Calendar now = Calendar.getInstance();
+		return "[" + df.format(now.getTime()) + ", " + df.format(start.getTime()) + "]\n\t";
 	}
 	
 	private enum Unit {nanoseconds, microseconds, milliseconds, seconds, minutes, hours}

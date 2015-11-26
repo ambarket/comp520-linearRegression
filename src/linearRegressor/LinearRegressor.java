@@ -1,12 +1,9 @@
 package linearRegressor;
-import java.io.File;
-
-import Jama.Matrix;
-import dataset.LinearRegressorDataset;
 import utilities.ExtraMatrixMethods;
 import utilities.MersenneTwisterFast;
-import utilities.SimpleHostLock;
 import utilities.StopWatch;
+import Jama.Matrix;
+import dataset.LinearRegressorDataset;
 enum UpdateRule {Original, AdaptedLR}
 public class LinearRegressor {
 	
@@ -16,7 +13,7 @@ public class LinearRegressor {
 	
 	public Matrix weightsWithoutRegularization;
 	
-	public LinearRegressor(LinearRegressorDataset lrDataset, int runNumber) {
+	public LinearRegressor(LinearRegressorDataset lrDataset) {
 		this.dataset = lrDataset;
 		
 		// Used every time getMSEGradient is calculated
@@ -36,30 +33,24 @@ public class LinearRegressor {
 		return trainXSquaredDivideOneHalfN.times(w).minusEquals(trainXTransposeTimesTrainYDivideOneHalfN);
 	}
 	
-	public String runGradientDescentAndSaveResults(GradientDescentParameters parameters) {
-		String directory = Main.RESULTS_DIRECTORY + parameters.subDirectory;
-		new File(directory).mkdirs();
-		if (SimpleHostLock.checkDoneLock(directory + "doneLock.txt")) {
-			return "Completed by another host";
-		}
-		if (!SimpleHostLock.checkAndClaimHostLock(directory + "hostLock.txt")) {
-			return "Claimed by another host";
-		}
+	public GradientDescentInformation runGradientDescent(GradientDescentParameters parameters) {
+
 		
 		Matrix w = newRandomWeights(dataset.numberOfPredictorsPlus1);
 		GradientDescentInformation info = new GradientDescentInformation(parameters);
 		info.summary.initialWeights = w;
 		StopWatch globalTimer = new StopWatch().start();
-		
+
 		int i = 0;
-		boolean breakEarly = false;
 		for (; i < parameters.maxNumberOfIterations; i ++) {
+			Matrix gradient = getMSEGradient(w);
+
 			switch (parameters.updateRule) {
 				case Original:
-					w = updateWeightsWithRegularization(w, parameters.learningRate, parameters.lambda);
+					w = updateWeightsWithRegularization(w, parameters.learningRate, parameters.lambda, gradient);
 					break;
 				case AdaptedLR:
-					w = updateWeightsAdaptByMagnitudeOfGradientWithRegularization(w, parameters.learningRate, parameters.lambda);
+					w = updateWeightsAdaptByMagnitudeOfGradientWithRegularization(w, parameters.learningRate, parameters.lambda, gradient, i);
 					break;
 			}
 			
@@ -67,23 +58,19 @@ public class LinearRegressor {
 			info.addTrainingError(getRMSE(dataset.trainX, dataset.trainY, w));
 			info.addValidationError(getRMSE(dataset.validX, dataset.validY, w));
 			info.addTestError(getRMSE(dataset.testX, dataset.testY, w));
+			info.addGradientMagnitude(ExtraMatrixMethods.getL2Norm(gradient));
 			info.weightsByIteration.add(w);
 			info.timeInSecondsUpToThisPoint.add(globalTimer.getElapsedSeconds());
 			
 			if (i % 20000 == 0) {
 				info.printStatusMessage("Completed " + i + " iterations", globalTimer);
 			}
-			if (info.isTimeToStopBasedOnTrainingError()) {
+			if (info.allStoppingConditionsHaveBeenMet()) {
 				break;
 			}
 		}
 		info.summary.actualNumberOfIterations = i;
-		info.saveToFile();
-		if (SimpleHostLock.writeDoneLock(directory + "doneLock.txt")) {
-			return "Gradient descent completed";
-		} else {
-			return "Failed to write done lock for some reason.";
-		}
+		return info;
 	}
 	
 	private Matrix newRandomWeights(int numberOfWeights) {
@@ -96,11 +83,14 @@ public class LinearRegressor {
 	}
 	
 	// When lambda is 0, these are the same as having no regularization so no need to distinguish
-	private Matrix updateWeightsWithRegularization(Matrix w, double learningRate, double lambda) {
-		return w.times(1 - ((2 * learningRate * lambda) / dataset.numberOfTrainingExamples)).minus(ExtraMatrixMethods.getUnitVector(getMSEGradient(w)).times(learningRate));
+	private Matrix updateWeightsWithRegularization(Matrix w, double learningRate, double lambda, Matrix gradient) {
+		gradient = ExtraMatrixMethods.getUnitVector(gradient);
+		return w.times(1 - ((2 * learningRate * lambda) / dataset.numberOfTrainingExamples)).minus(gradient.times(learningRate));
 	}
 	
-	private Matrix updateWeightsAdaptByMagnitudeOfGradientWithRegularization(Matrix w, double learningRate, double lambda) {
-		return w.times(1 - ((2 * learningRate * lambda) / dataset.numberOfTrainingExamples)).minus(getMSEGradient(w).times(learningRate));
+	private Matrix updateWeightsAdaptByMagnitudeOfGradientWithRegularization(Matrix w, double learningRate, double lambda, Matrix gradient, int iteration) {
+		gradient = ExtraMatrixMethods.getUnitVector(getMSEGradient(w));
+		learningRate = learningRate / (iteration / 10000 + 1);
+		return w.times(1 - ((2 * learningRate * lambda) / dataset.numberOfTrainingExamples)).minus(gradient.times(learningRate));
 	}
 }
