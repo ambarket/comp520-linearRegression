@@ -1,0 +1,9 @@
+
+Finally, Figures \ref{fig:LambdaVsAll} and \ref{fig:LearningRateVsAll} provide an overall summary of how the implemented linear regression algorithm responds to different learning rates and lambda values respectively. These plots exhibit some interesting trends that will be the subject of much of our discussion.
+
+
+From Figures \ref{fig:LambdaVsAll} and \ref{fig:LearningRateVsAll} we can gain a better understanding of how the algorithm responds to different update rules as the learning rates and lambdas are adjusted. In Figure \ref{fig:LearningRateVsAll}, our earlier observation that some regularization is better than no regularization is confirmed for the cases of the original and descending learning rate update rules, however in the case of the gradeint magnitude scaling rule, it appears that a $\lambda$ of 0 should actually be better than using regularization. This discrepency is due to the fact that each point in the plots in these figures represent the average y value for all tests matching a given x value. So across all tested learning rates, no regularization performs best on average when using gradient magnitude scaling, however the best case schenario for gradient magnitude still occurred 
+
+
+
+

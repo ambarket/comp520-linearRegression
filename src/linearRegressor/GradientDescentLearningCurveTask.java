@@ -15,12 +15,12 @@ import utilities.StopWatch;
 public class GradientDescentLearningCurveTask implements Callable<Void> {
 	GradientDescentParameters parameters;
 	LinearRegressor lr;
-	int foldNumber;
+	int runNumber, submissionNumber, totalSubmissions;
 	String locksDirectory;
 	
 	private static String learningCurveEntryFileName = "learningCurveEntry.txt";
 	
-	public GradientDescentLearningCurveTask(LinearRegressor lr, GradientDescentParameters parameters) {
+	public GradientDescentLearningCurveTask(LinearRegressor lr, int runNumber, int submissionNumber, int totalSubmissions, GradientDescentParameters parameters) {
 		this.parameters = parameters;
 		this.lr = lr;
 		this.locksDirectory = Main.LOCKS_DIRECTORY + parameters.subDirectory;
@@ -30,16 +30,17 @@ public class GradientDescentLearningCurveTask implements Callable<Void> {
 	@Override
 	public Void call() throws Exception {
 		StopWatch timer = new StopWatch().start();
-		timer.printMessageWithTime(String.format("[%s] Starting gradientDescentLearningCurveTask on %s" , parameters.datasetMinimalName, parameters.subDirectory));
+		timer.printMessageWithTime(String.format("[%s] [Run%d] [Test %d/%d] Starting gradientDescentLearningCurveTask on %s" , parameters.datasetMinimalName, runNumber, submissionNumber, totalSubmissions, parameters.subDirectory));
+
 		GradientDescentInformation info = null;
 		String message = checkDoneAndHostLocks();
 		if (message == null) {
-			info = lr.runGradientDescent(parameters);
+			info = lr.runGradientDescent(parameters, runNumber, submissionNumber, totalSubmissions);
 			info.summary.saveToFile();
 			saveToLearningCurveFile(info.summary);
 			message = writeDoneLock();
 		}
-		timer.printMessageWithTime(String.format("[%s] " + message + " %s ", parameters.datasetMinimalName, parameters.subDirectory));
+		timer.printMessageWithTime(String.format("[%s] [Run%d] [Test %d/%d]" + message + " %s ", parameters.datasetMinimalName, runNumber, submissionNumber, totalSubmissions, parameters.subDirectory));
 		return null;
 	}
 	
@@ -52,9 +53,9 @@ public class GradientDescentLearningCurveTask implements Callable<Void> {
 					+ "MinTestError\n"));
 			bw.write(String.format("%d\t%f\t%f\t%f\n", 
 					summary.parameters.dataset.numberOfTrainingExamples, 
-					summary.minTrainingError, 
-					summary.minValidationError, 
-					summary.minTestError));
+					summary.validationStoppingTrainingError, 
+					summary.validationStoppingValidationError, 
+					summary.validationStoppingTestError));
 			bw.flush();
 			bw.close();
 		} catch (IOException e) {

@@ -50,7 +50,7 @@
 \LoadClass[twoside]{article}
 \RequirePackage{multicol} % needed for the list of participants, index
 
-\setlength{\textwidth}{16.5cm}
+\setlength{\textwidth}{12.2cm}
 \setlength{\textheight}{19.3cm}
 \renewcommand\@pnumwidth{2em}
 \renewcommand\@tocrmarg{3.5em}
@@ -212,9 +212,9 @@
 \widowpenalty=10000
 \clubpenalty=10000
 
-\setlength\oddsidemargin   {5\p@}
-\setlength\evensidemargin  {5\p@}
-\setlength\marginparwidth  {190\p@}
+\setlength\oddsidemargin   {63\p@}
+\setlength\evensidemargin  {63\p@}
+\setlength\marginparwidth  {90\p@}
 
 \setlength\headsep   {16\p@}
 

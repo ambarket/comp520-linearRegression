@@ -26,7 +26,7 @@ public class DerivativeSolverTask implements Callable<Void> {
 	public Void call() {
 		StopWatch timer = new StopWatch().start();
 		
-		String directory = String.format("%s/%s/Run%d/derivativeSetToZero/%dTrainingExamples/", Main.RESULTS_DIRECTORY, lr.dataset.dataset.parameters.minimalName,runNumber,  numberOfExamples);
+		String directory = String.format("%s/%s/derivativeSetToZero/Run%d/%dTrainingExamples/", Main.RESULTS_DIRECTORY, lr.dataset.dataset.parameters.minimalName,runNumber,  numberOfExamples);
 		new File(directory).mkdirs();
 		if (SimpleHostLock.checkDoneLock(directory + "doneLock.txt")) {
 			timer.printMessageWithTime(String.format("[%s] [Run %d] Already done by another host %d training example DerivateSolver", lr.dataset.dataset.parameters.minimalName, runNumber, numberOfExamples));
@@ -58,8 +58,8 @@ public class DerivativeSolverTask implements Callable<Void> {
 		return null;
 	}
 	
-	public static LearningCurveEntry readOptimalWeightsBySolvingDerivate(DatasetParameters datasetParams, int numberOfExamples, int runNumber) {
-		String directory = String.format("%s/%s/Run%d/derivativeSetToZero/%dTrainingExamples/", Main.RESULTS_DIRECTORY, datasetParams.minimalName,runNumber,  numberOfExamples);
+	public static LearningCurveEntry readOptimalWeightsBySolvingDerivative(DatasetParameters datasetParams, int numberOfExamples, int runNumber) {
+		String directory = String.format("%s/%s/derivativeSetToZero/Run%d/%dTrainingExamples/", Main.RESULTS_DIRECTORY, datasetParams.minimalName,runNumber,  numberOfExamples);
 		BufferedReader br;
 		LearningCurveEntry result = new LearningCurveEntry();
 		result.numberOfTrainingExamples = numberOfExamples;

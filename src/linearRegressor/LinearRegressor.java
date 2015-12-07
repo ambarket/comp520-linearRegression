@@ -4,7 +4,20 @@ import utilities.MersenneTwisterFast;
 import utilities.StopWatch;
 import Jama.Matrix;
 import dataset.LinearRegressorDataset;
-enum UpdateRule {Original, AdaptedLR}
+enum UpdateRule {Original, AdaptedLR, GradientMag;
+
+	public String toString() {
+		switch (this) {
+		case Original:
+			return "Original";
+		case AdaptedLR:
+			return "Descending";
+		case GradientMag:
+			return "GradientMagnitude";
+		}
+		return "";
+	}
+}
 public class LinearRegressor {
 	
 	public LinearRegressorDataset dataset;
@@ -33,9 +46,7 @@ public class LinearRegressor {
 		return trainXSquaredDivideOneHalfN.times(w).minusEquals(trainXTransposeTimesTrainYDivideOneHalfN);
 	}
 	
-	public GradientDescentInformation runGradientDescent(GradientDescentParameters parameters) {
-
-		
+	public GradientDescentInformation runGradientDescent(GradientDescentParameters parameters, int runNumber, int submissionNumber, int totalSubmissions ) {
 		Matrix w = newRandomWeights(dataset.numberOfPredictorsPlus1);
 		GradientDescentInformation info = new GradientDescentInformation(parameters);
 		info.summary.initialWeights = w;
@@ -50,6 +61,9 @@ public class LinearRegressor {
 					w = updateWeightsWithRegularization(w, parameters.learningRate, parameters.lambda, gradient);
 					break;
 				case AdaptedLR:
+					w = updateWeightsAdaptByDecsendingLearningRateWithRegularization(w, parameters.learningRate, parameters.lambda, gradient, i);
+					break;
+				case GradientMag:
 					w = updateWeightsAdaptByMagnitudeOfGradientWithRegularization(w, parameters.learningRate, parameters.lambda, gradient, i);
 					break;
 			}
@@ -63,13 +77,16 @@ public class LinearRegressor {
 			info.timeInSecondsUpToThisPoint.add(globalTimer.getElapsedSeconds());
 			
 			if (i % 20000 == 0) {
-				info.printStatusMessage("Completed " + i + " iterations", globalTimer);
+				info.printStatusMessage(String.format("[Run %d] [Test %d/%d] Completed " + i + " iterations", runNumber, submissionNumber, totalSubmissions), globalTimer);
 			}
 			if (info.allStoppingConditionsHaveBeenMet()) {
 				break;
 			}
 		}
 		info.summary.actualNumberOfIterations = i;
+		info.isTimeToStopBasedOnGradientMagnitude(true);
+		info.isTimeToStopBasedOnTrainingError(true);
+		info.isTimeToStopBasedOnValidationError(true);
 		return info;
 	}
 	
@@ -88,9 +105,16 @@ public class LinearRegressor {
 		return w.times(1 - ((2 * learningRate * lambda) / dataset.numberOfTrainingExamples)).minus(gradient.times(learningRate));
 	}
 	
-	private Matrix updateWeightsAdaptByMagnitudeOfGradientWithRegularization(Matrix w, double learningRate, double lambda, Matrix gradient, int iteration) {
+	private Matrix updateWeightsAdaptByDecsendingLearningRateWithRegularization(Matrix w, double learningRate, double lambda, Matrix gradient, int iteration) {
 		gradient = ExtraMatrixMethods.getUnitVector(getMSEGradient(w));
 		learningRate = learningRate / (iteration / 10000 + 1);
 		return w.times(1 - ((2 * learningRate * lambda) / dataset.numberOfTrainingExamples)).minus(gradient.times(learningRate));
+	}
+	
+	private Matrix updateWeightsAdaptByMagnitudeOfGradientWithRegularization(Matrix w, double learningRate, double lambda, Matrix gradient, int iteration) {
+		learningRate *= 0.000001;
+		gradient = getMSEGradient(w);
+		double learningRate2 = learningRate * ExtraMatrixMethods.getL2Norm(w);
+		return w.times(1 - ((2 * learningRate2 * lambda) / dataset.numberOfTrainingExamples)).minus(gradient.times(learningRate));
 	}
 }

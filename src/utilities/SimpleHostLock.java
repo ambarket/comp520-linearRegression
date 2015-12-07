@@ -12,6 +12,8 @@ import java.net.InetAddress;
 
 public class SimpleHostLock {
 	public static boolean checkAndClaimHostLock(String hostLockFilePath) {
+		return true;
+		/*
 		File hostLock;
 		if ((hostLock = new File(hostLockFilePath)).exists()) {
 			try {
@@ -31,6 +33,7 @@ public class SimpleHostLock {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+
 		} else {
 			try {
 				BufferedWriter bw = new BufferedWriter(new PrintWriter(hostLock));
@@ -44,6 +47,7 @@ public class SimpleHostLock {
 		}
 		System.out.println("ERROR Shouldnt reach here in checkAndClaimHostLock");
 		return false;
+					*/
 	}
 	
 	public static boolean checkDoneLock(String doneLockFilePath) {

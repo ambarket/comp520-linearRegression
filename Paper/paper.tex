@@ -1,4 +1,4 @@
-\documentclass[runningheads]{llncs_2}
+\documentclass[runningheads]{llncs}
 
 \usepackage{graphicx}
 \usepackage{placeins}
@@ -8,7 +8,7 @@
 \usepackage{comment}
 \usepackage{hhline}
 \usepackage{algorithm2e}
-\usepackage[colorlinks=true, urlcolor=blue]{hyperref}
+\usepackage[colorlinks=true, linkcolor=blue, urlcolor=blue]{hyperref}
 \usepackage{filecontents,lipsum}
 \usepackage{cite}
 \usepackage{import}
@@ -72,7 +72,7 @@ First, the generic batch gradient descent algorithm provided in class was implem
 
 \subsection{Update Rules}
 
-We tested three versions of the gradient descent update rule. First, the original constant learning rate rule, seen in Figure \ref{fig:originalUR} was tested. Note that the notation $\mu$ is used to represent the learning rate and $\lambda$ for the regularization constant. Of course, setting $\lambda$ to 0 in these equations is equivalent to using no regularization at all. In addition to constant learning rates, the formulas provided in Figure \ref{fig:adaptedUR} and \ref{fig:gradientMagUR} were used to adapt the learning rate prior to use in the update rule and the results were compared.
+I tested three versions of the gradient descent update rule. First, the original constant learning rate rule, seen in Figure \ref{fig:originalUR} was tested. Note that the notation $\mu$ is used to represent the learning rate and $\lambda$ for the regularization constant. Of course, setting $\lambda$ to 0 in these equations is equivalent to using no regularization at all. In addition to constant learning rates, the formulas provided in Figure \ref{fig:adaptedUR} and \ref{fig:gradientMagUR} were used to adapt the learning rate prior to use in the update rule and the results were compared.
 
 The Descending Learning Rate rule in \ref{fig:adaptedUR} is designed as a very simple scheme to ensure that as the iteration number increases, the effective learning rate will decrease, hopefully leading to a fast initial descent followed by smoothly approaching a minimum error. The constant of $10^{4}$ in this equation was found through some trial and error and was necessary in order to get decent performance when using the same learning rates as used with the Original update rule, which was desirable for comparison purposes. Without this constant scaling of the learning rates, this adaptation scheme would result in learning rates so small that almost no change would be made to the weights each iteration and thus the algorithm would reach the max number of iterations long before convergence. 
 
@@ -103,7 +103,7 @@ Of course if a different dataset were used the error landscape and magnitude of 
 
 \subsection{Parameters}
 
-The learning rates and lambda values tested are provided in \ref{tab:parameters}, along with the max number of iterations parameter. For each triplet of $\mu$, $\lambda$, and update rule, the gradient descent algorithm was run until either the max number of iterations was reached or all of three tested stopping conditions discussed in subsection \ref{subsec:stopping} have evaluated to true. This leads to $6 \ \mu's \ * \ 6 \ \lambda's \ * \ 3 \ \text{update rules} = 108 \ \text{total tests in each run}$. 
+The learning rates and lambda values tested are provided in Table \ref{tab:parameters}, along with the max number of iterations parameter. For each triplet of $\mu$, $\lambda$, and update rule, the gradient descent algorithm was run until either the max number of iterations was reached or all of three tested stopping conditions discussed in subsection \ref{subsec:stopping} have evaluated to true. This leads to $6 \ \mu's \ * \ 6 \ \lambda's \ * \ 3 \ \text{update rules} = 108 \ \text{total tests in each run}$. 
 
 \begin{table}[!htbp]
 	\centering
@@ -123,7 +123,7 @@ The learning rates and lambda values tested are provided in \ref{tab:parameters}
 
 During each test using a given set of parameters, three individual stopping points are tracked, and the algorithm breaks early only if all three conditions have been met. This will allow us to plot all three stopping points on each of our error curves for a convenient visual representation of the effectiveness of each condition and how they relate to one another. 
 
-The first, and most conservative stopping condition is triggered when the algorithm has gone 20000 iterations without improving upon the minimum training error seen so far. Of course stopping the algorithm based on the training set error is never a good idea in practice since the learned weights are heavily biased towards predicting the training data and thus one cannot obtain a reliable estimate of the generalization error based on the training data alone. For our purposes this stopping condition serves as a conservative way to prevent the algorithm from running all the way to the max number of iterations if it does not need to. If the algorithm has converged to minimum error on the training data (or in odd circumstances it begins to diverge on the training data), this should be a pretty safe indication that further training is pointless, and this should be long after the more realistic stopping conditions have been reached, and should result in error curves that simultaneously display the point at which a better stopping condition would have stopped and what would have happened if it did not stop. 
+The first, and most conservative stopping condition is triggered when the algorithm has gone 20000 iterations without improving upon the minimum training error seen so far. Of course stopping the algorithm based on the training set error is never a good idea in practice since the learned weights are heavily biased towards predicting the training data and thus one cannot obtain a reliable estimate of the generalization error based on the training data alone. For our purposes this stopping condition serves as a conservative way to prevent the algorithm from running all the way to the max number of iterations if it does not need to. If the algorithm has converged to minimum error on the training data (or in odd circumstances it begins to diverge on the training data), this should be a pretty safe indication that further training is pointless, and should result in error curves that simultaneously display the point at which a better stopping condition would have stopped and what would have happened if it did not stop. 
 
 The second, more typical stopping condition is triggered when the algorithm has gone 5000 iterations without improving upon the minimum validation error seen so far. As we discussed extensively in class the best way to get an unbiased estimate of $E_{out}$ is to use some form of validation set, which is used during training only for the purposes of estimating the out of sample error and stopping the algorithm when this validation error stops decreasing or begins to increase due to overfitting of the training data. For the purposes of our results and discussion, the validation stopping iteration, training error, validation error, and test error refer to the iteration at which the minimum validation error was actually acheived, not the iteration at which the stopping condition was triggered (which will be 5000 iterations past the actual minimum). 
 
@@ -133,7 +133,7 @@ One additional stopping condition was implemented that is specialized for the gr
 
 Each run begins with a uniformly at random partitioning of the dataset. 60\% goes to the training set, 20\% is used for validation, and the last 20\% is held as a test set to get an unbiased estimate of $E_{out}$. All 108 sets of parameters are evaluated using this same dataset split to ensure comparability of their results.
 
-Five independent runs were performed and all run data was averaged. The results found in \ref{sec:results} are derived from these averages. Note I had planned on performing twenty or thirty runs rather than five to improve statistical significance. Unfortunately, I ran out of time due to last minute adjustments to the experiment. Although not ideal, five runs should still be sufficient to get a good idea of how the hypothesis space of linear regressors responds to the various parameters tested.  
+Ten independent runs were performed and all run data was averaged. The results found in \ref{sec:results} are derived from these averages. Note I had planned on performing twenty or thirty runs rather than five to improve statistical significance. Unfortunately, I ran out of time due to last minute adjustments to the experiment. Although not ideal, ten runs should still be sufficient to get a good idea of how the hypothesis space of linear regressors responds to the various parameters tested.  
 
 
 
@@ -157,52 +157,26 @@ Starting with the information about the best parameters found in Table \ref{tab:
 
 The other factor that jumps out from these tables is that the training, validation, and test errors are all essentially the same across the board. By looking at the Vapnik-Chervonenkis Generalization Bound we can get an intuition behind why this is the case. This equation tells us that as the number of samples $N$ becomes large, the quality of generalization improves. More specifically, the probability of $E_{IN}$ and $E_{OUT}$ being very close to each other increases. In addition linear regression has a very small vc dimension, in particular it should be approximately the same as the number of weights the algorithm has available to define the resulting line, which in this case is only 5. The VC Generalization Bound also tell us that by using a simple hypothesis space such as linear regressors, the generalization penalty will be small and $E_{IN}$ and $E_{OUT}$ will be close to each other. Thus the results are in line with what one would expect when applying a simple hypothesis space to a relatively large dataset.
 
-Also node that in all cases, the best parameters contain a non-zero regularization constant $\lambda$. This was somewhat unexpected since linear regression is such a simplistic algorithm, it would seem that regularization would only imped the ability of the algorithm to make the best fit it possibly can on a dataset that is not perfectly linear. However, from the linear regressor's point of view, the non-linear relationships in the dataset would appear as deterministic noise, and thus its possible that the regularization allows the model to focus more on the predictors that are linear correlated with the response and less so on those that are not which would explain the reduced overall error that we are seeing.
+Also note that in all cases, the best parameters contain a non-zero regularization constant $\lambda$. This was somewhat unexpected since linear regression is such a simplistic algorithm, it would seem that regularization would only imped the ability of the algorithm to make the best fit it possibly can on a dataset that is not perfectly linear. However, from the linear regressor's point of view, the non-linear relationships in the dataset would appear as deterministic noise, and thus its possible that the regularization allows the model to focus more on the predictors that are linear correlated with the response and less so on those that are not which would explain the reduced overall error that we are seeing.
 
-Finally, in Table 2 we see the unexpected result that the best parameters are the same for both stopping conditions for all cases except the Original update rule. In this case, the learning rates are the same, only lambda differs, and the observed error values only differ in the hundredths or thousandths place. Moving to the error, gradient magnitude, and learning curves of Figures \ref{fig:validStopErrorCurves} and \ref{fig:gradientStopErrorCurves}, its apparent that the reason the stopping condition does not seem to matter much among the best parameters, is that the conditions did not have a change to be met before reaching the maximum number of iterations. We can also see that in all of these cases, there would be very little value to continuing with the learning as the error curves have essentially flatlined long before that max number of iterations was reached. The fact that the stopping conditions were not met indicates that the validation error was technically still decreasing all the way to the end but by visual analysis these decreases were too small to be of any practical value. The logical remedy for this would be to add a small threshold on the amount the validation error must decrease by in order to continue training. The gradient magnitude based stopping condition could also be remedied by adding a decrease threshold. Specifically, the threshold should be applied to the slope of the gradient magnitude curve and would ideally detect the point where the curve is at the "vertex" of the slightly parabolic looking trend it follows. That is the point where the iterations begin increasing "much faster" than the magnitude is decreasing. The difficulty would be finding exactly where this "much faster" point is since it would likely vary drastically for different datasets, response variables, and especially error functions.
+Finally, in Table 2 we see the unexpected result that the best parameters are the same for both stopping conditions for all cases except the Original update rule. In this case, the learning rates are the same, only lambda differs, and the observed error values only differ in the thousandths place. Moving to the error, gradient magnitude, and learning curves of Figures \ref{fig:validStopErrorCurves} and \ref{fig:gradientStopErrorCurves}, its apparent that the reason the stopping condition does not seem to matter among the best parameters, is that the conditions did not have a change to be met before reaching the maximum number of iterations. We can also see that in all of these cases, there would be very little value to continuing with the learning as the error curves have essentially flatlined long before that max number of iterations was reached. The fact that the stopping conditions were not met indicates that the validation error was technically still decreasing all the way to the end but by visual analysis these decreases were too small to be of any practical value. The logical remedy for this would be to add a small threshold on the amount the validation error must decrease by in order to continue training. The gradient magnitude based stopping condition could also be remedied by adding a decrease threshold. Specifically, the threshold should be applied to the slope of the gradient magnitude curve and would ideally detect the point where the curve is at the "vertex" of the slightly parabolic looking trend it follows. That is the point where the iterations begin increasing "much faster" than the magnitude is decreasing. The difficulty would be finding exactly where this "much faster" point is since it would likely vary drastically for different datasets, response variables, and especially error functions.
 
-The evidence of the VC Generalization Bound is quite apparent in the error curves where we see that there is never a significant, noticeable difference between the training, validation, and test error values. Since the number of training examples far exceeds the vc dimension of linear regressors, all the examples found in the validation and test sets are highly unlikely to contain any relationships that are not already in the training set and that the linear regressor is actually capable of modeling using its extremely limited number of parameters. Thus regardless of where the learned line actually lies in the space of the dataset, its performance will be almost identical across all of the dataset partitions. In bias-variance-noise terms the same argument can be made by noting that simple models have very low variance, so all the possible models will have very similar performance. The low variance, high bias tradeoff is quite apparent in the learning curves of figures \ref{fig:validStopErrorCurves} and \ref{fig:gradientStopErrorCurves}. Here we see that past 50 or so training examples, the learning capacity of the linear regressor has already been saturated and all the error values have converged to a value around five which is approximately the same minimum error we were able to achieve using 60\% of the dataset for training. This makes sense from a bias-variance-noise point of view because this apparent invisible threshold corresponds to the bias and the noise that is inherent to the chosen hypothesis space and this dataset. No matter what parameters or training data we throw at the algorithm it can never achieve better than bias plus the noise. If better performance than this is required, a more complex algorithm with a larger VC dimension and lower bias must be employed.
+The evidence of the VC Generalization Bound is quite apparent in the error curves where we see that there is never a significant, noticeable difference between the training, validation, and test error values. Since the number of training examples far exceeds the vc dimension of linear regressors, all the examples found in the validation and test sets are highly unlikely to contain any relationships that are not already in the training set and that the linear regressor is actually capable of modeling using its extremely limited number of parameters. Thus regardless of where the learned line actually lies in the space of the dataset, its performance will be almost identical across all of the dataset partitions. In bias-variance-noise terms the same argument can be made by noting that simple models have very low variance, so all the possible models will have very similar performance. The low variance, high bias tradeoff is quite apparent in the learning curves of figures \ref{fig:validStopErrorCurves} and \ref{fig:gradientStopErrorCurves}. Here we see that past 50 or so training examples, the learning capacity of the linear regressor has already been saturated and all the error values have converged to a value around five which is approximately the same minimum error we were able to achieve using 60\% of the dataset for training. This makes sense from a bias-variance-noise point of view because this apparent invisible threshold corresponds to the bias and the noise that is inherent to the chosen hypothesis space and this dataset. No matter what parameters or training data we throw at the algorithm, it can never achieve better than the bias plus the noise.
 
+\section{Conclusion}
 
-\begin{thebibliography}{100} % 100 is a random guess of the total number of
+I implemented  batch gradient descent implementation of multiple linear regression and applied it to a relatively large publicly available dataset from the UCI Machine Learning Repository. The algorithm was tested using several variations of the gradient descent update rule with various learning rates and regularization constants. 
+
+The results show that the tested update rules, stopping conditions, learning rates, and lambda values do not result in significant differences in the resulting models; the conclusion being that linear regressors are too simple of a hypothesis space for this dataset and under fitting is likely. Due to the small vc dimension, low variance of linear regressors, and the large size of the dataset, the VC Generalization Bound and Bias-Variance-Noise analysis accurately predict the observed results, which show almost no difference in the errors on the training, validation, and test sets for the best parameters. In addition, the learning curves show us that using 50 or greater training examples results in achievement of approximately the same minimum error values. Thus it seems that this minimum can be attributed to the bias and noise of linear regressors on this dataset and its unlikely that any parameter values could lead to a linear regression model significantly better than the minimums observed in this experiment. In the real world, if better performance than this was required, linear regressors would need to be thrown out in favor of a more complex algorithm with a larger VC dimension and lower bias.
+
+\begin{thebibliography}{3} % 100 is a random guess of the total number of
 	%references
 	\addtolength{\leftmargin}{0.2in} % sets up alignment with the following line.
 	\setlength{\itemindent}{-0.2in}
-	\bibitem[1]{powerPlantDataset} ``Combined Cycle Power Plant Data Set," http://archive.ics.uci.edu/ml/datasets/Combined+Cycle+Power+Plant
-	\bibitem[2]{powerPlantCiteRequest1} Goossens, M., Mittelbach, F., Samarin, \emph{A LaTeX
-		Companion}, Addison-Wesley, Reading, MA, 1994.
-	\bibitem[3]{powerPlantCiteRequest2} Kopka, H., Daly P.W., \emph{A Guide to LaTeX},
-	Addison-Wesley, Reading, MA, 1999.
-	\bibitem[4]{Pan} Pan, D., ``A Tutorial on MPEG/Audio Compression,"
-	\emph{IEEE Multimedia}, Vol.2, pp.60-74, Summer 1998.
+	\bibitem[1]{powerPlantDataset} "Combined Cycle Power Plant Data Set", [Online]. \\ Available: http://archive.ics.uci.edu/ml/datasets/Combined+Cycle+Power+Plant
+	\bibitem[2]{powerPlantCiteRequest1} P. Tüfekci, ``Prediction of full load electrical power output of a base load operated combined cycle power plant using machine learning methods", \emph{International Journal of Electrical Power \& Energy Systems}, pp. 126-140, 2014. [Online]. Available:  http://dx.doi.org/10.1016/j.ijepes.2014.02.027
+	
+	\bibitem[3]{powerPlantCiteRequest2} H. Kaya, P. Tüfekci, ``Local and Global Learning Methods for Predicting Power of a Combined Gas \& Steam Turbine", \emph{Proceedings of the International Conference on Emerging Trends in Computer and Electronics Engineering ICETCEE 2012}, pp. 13-18, 2012. [Online].
+	\bibitem[4]{powerPlantCiteRequest2} S. Chang, ``COMP 520 Class Notes".
 \end{thebibliography}
-
- @misc{powerPlantDataset,
- 	title={Combined Cycle Power Plant Data Set },
- 	url={http://archive.ics.uci.edu/ml/datasets/Combined+Cycle+Power+Plant}
- }
- 
- @article{powerPlantCiteRequest1,
- 	year={2014},
- 	issn={0142-0615},
- 	journal={International Journal of Electrical Power \& Energy Systems},
- 	doi={10.1016/j.ijepes.2014.02.027},
- 	title={ Prediction of full load electrical power output of a base load operated combined cycle power plant using machine learning methods},
- 	url={http://dx.doi.org/10.1016/j.ijepes.2014.02.027},
- 	author={Pınar Tüfekci},
- 	pages={126-140},
- 	volume={60}
- }
- @article{powerPlantCiteRequest2,
- 	year={2012},
- 	journal={roceedings of the International Conference on Emerging Trends in Computer and Electronics Engineering ICETCEE 2012},
- 	title={Local and Global Learning Methods for Predicting Power of a Combined Gas \& Steam Turbine},
- 	author={Heysem Kaya, Pınar Tüfekci},
- 	pages={13-18}
- }
-
-
-\bibliographystyle{IEEEtran}
-\bibliography{references}
-
 \end{document}

@@ -9,29 +9,33 @@ import utilities.StopWatch;
 public class GradientDescentTask implements Callable<Void> {
 	GradientDescentParameters parameters;
 	LinearRegressor lr;
-	int foldNumber;
+	int runNumber;
+	int submissionNumber, totalSubmissions;
 	String locksDirectory;
-	public GradientDescentTask(LinearRegressor lr, GradientDescentParameters parameters) {
+	public GradientDescentTask(LinearRegressor lr, int runNumber, int submissionNumber, int totalSubmissions, GradientDescentParameters parameters) {
 		this.parameters = parameters;
 		this.lr = lr;
 		this.locksDirectory = Main.LOCKS_DIRECTORY + parameters.subDirectory;
 		new File(locksDirectory).mkdirs();
+		this.runNumber = runNumber;
+		this.submissionNumber = submissionNumber;
+		this.totalSubmissions = totalSubmissions;
 	}
 	
 	@Override
 	public Void call() throws Exception {
 		StopWatch timer = new StopWatch().start();
-		timer.printMessageWithTime(String.format("[%s] Starting gradientDescent on %s" , parameters.datasetMinimalName, parameters.subDirectory));
+		timer.printMessageWithTime(String.format("[%s] [Run%d] [Test %d/%d] Starting gradientDescent on %s" , parameters.datasetMinimalName, runNumber, submissionNumber, totalSubmissions, parameters.subDirectory));
 		GradientDescentInformation info = null;
 		String message = checkDoneAndHostLocks();
 		if (message == null) {
-			info = lr.runGradientDescent(parameters);
+			info = lr.runGradientDescent(parameters, runNumber, submissionNumber, totalSubmissions);
 			info.saveToFile();
-			info.generateErrorCurveScript();
-			info.executeErrorCurveScript();
+			//info.generateErrorCurveScript();
+			//info.executeErrorCurveScript();
 			message = writeDoneLock();
 		}
-		timer.printMessageWithTime(String.format("[%s] " + message + " %s ", parameters.datasetMinimalName, parameters.subDirectory));
+		timer.printMessageWithTime(String.format("[%s] [Run%d] [Test %d/%d]" + message + " %s ", parameters.datasetMinimalName, runNumber, submissionNumber, totalSubmissions, parameters.subDirectory));
 		return null;
 	}
 	

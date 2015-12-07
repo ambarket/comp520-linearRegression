@@ -29,7 +29,11 @@ public class SumCountAverage {
 		if (meanOutOfDate) {
 			mean = sum / count;
 		}
-		return sumOfSquares - (mean * sum);
+		double val = sumOfSquares - (mean * sum);
+		if (val < 0) {
+			val = 0;
+		}
+		return val;
 	}
 	
 	public double getMeanSquaredError() {

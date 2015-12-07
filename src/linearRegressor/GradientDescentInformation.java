@@ -9,12 +9,12 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 
 import utilities.CommandLineExecutor;
-import utilities.DoubleCompare;
 import utilities.ExtraMatrixMethods;
 import utilities.MathematicaListCreator;
 import utilities.StopWatch;
 import utilities.SumCountAverage;
 import Jama.Matrix;
+import dataset.DatasetParameters;
 
 public class GradientDescentInformation {
 	public GradientDescentSummary summary;
@@ -66,12 +66,12 @@ public class GradientDescentInformation {
 		gradientMagnitudesByIteration.add(mag);
 		int iter = trainingErrorByIteration.size() - 1;
 		
-		if (DoubleCompare.lessThan(summary.maxGradientMagnitude, mag)) {
+		if (summary.maxGradientMagnitude < mag) {
 			summary.maxGradientMagnitude = mag;
 			summary.maxGradientMagnitudeIteration = iter;
 		}
 		
-		if (DoubleCompare.lessThan(mag, summary.minGradientMagnitude)) {
+		if (mag < summary.minGradientMagnitude) {
 			summary.minGradientMagnitude = mag;
 			summary.minGradientMagnitudeIteration = iter;
 			iterationsSinceGradientMagnitudeDecreased.add(0);
@@ -79,18 +79,18 @@ public class GradientDescentInformation {
 			int newIterSinceImpr = iterationsSinceGradientMagnitudeDecreased.get(iter-1)+1;
 			iterationsSinceGradientMagnitudeDecreased.add(newIterSinceImpr);
 		}
-		isTimeToStopBasedOnGradientMagnitude();
+		isTimeToStopBasedOnGradientMagnitude(false);
 	}
 	
 	public void addTrainingError(double error) {
 		trainingErrorByIteration.add(error);
 		int iter = trainingErrorByIteration.size() - 1;
-		if (DoubleCompare.lessThan(summary.maxTrainingError, error)) {
+		if (summary.maxTrainingError <error) {
 			summary.maxTrainingError = error;
 			summary.maxTrainingErrorIteration = iter;
 		}
 		
-		if (DoubleCompare.lessThan(error, summary.minTrainingError)) {
+		if (error < summary.minTrainingError) {
 			summary.minTrainingError = error;
 			summary.minTrainingErrorIteration = iter;
 			iterationsSinceTrainingErrorImproved.add(0);
@@ -98,18 +98,18 @@ public class GradientDescentInformation {
 			int newIterSinceImpr = iterationsSinceTrainingErrorImproved.get(iter-1)+1;
 			iterationsSinceTrainingErrorImproved.add(newIterSinceImpr);
 		}
-		isTimeToStopBasedOnTrainingError();
+		isTimeToStopBasedOnTrainingError(false);
 	}
 	
 	public void addValidationError(double error) {
 		validationErrorByIteration.add(error);
 		int iter = validationErrorByIteration.size() - 1;
-		if (DoubleCompare.lessThan(summary.maxValidationError, error)) {
+		if (summary.maxValidationError < error) {
 			summary.maxValidationError = error;
 			summary.maxValidationErrorIteration = iter;
 		}
 		
-		if (DoubleCompare.lessThan(error, summary.minValidationError)) {
+		if (error < summary.minValidationError) {
 			summary.minValidationError = error;
 			summary.minValidationErrorIteration = iter;
 			iterationsSinceValidationErrorImproved.add(0);
@@ -117,26 +117,26 @@ public class GradientDescentInformation {
 			int newIterSinceImpr = iterationsSinceValidationErrorImproved.get(iter-1)+1;
 			iterationsSinceValidationErrorImproved.add(newIterSinceImpr);
 		}
-		isTimeToStopBasedOnValidationError();
+		isTimeToStopBasedOnValidationError(false);
 	}
 	
 	public void addTestError(double error) {
 		testErrorByIteration.add(error);
 		int iter = testErrorByIteration.size() - 1;
-		if (DoubleCompare.lessThan(summary.maxTestError, error)) {
+		if (summary.maxTestError < error) {
 			summary.maxTestError = error;
 			summary.maxTestErrorIteration = iter;
 		}
 		
-		if (DoubleCompare.lessThan(error, summary.minTestError)) {
+		if (error < summary.minTestError) {
 			summary.minTestError = error;
 			summary.minTestErrorIteration = iter;
 		}
 	}
 	
-	public boolean isTimeToStopBasedOnTrainingError() {
+	public boolean isTimeToStopBasedOnTrainingError(boolean force) {
 		int lastIteration =  trainingErrorByIteration.size() - 1;
-		if (summary.trainingStoppingIteration == -1 && iterationsSinceTrainingErrorImproved.get(lastIteration) == 20000) {
+		if (summary.trainingStoppingIteration == -1 && (force | iterationsSinceTrainingErrorImproved.get(lastIteration) == 20000)) {
 			System.out.println(String.format("Reached training error stopping criterion after %d iterations.", 
 					trainingErrorByIteration.size()));
 			summary.trainingStoppingIteration = summary.minTrainingErrorIteration;
@@ -148,9 +148,9 @@ public class GradientDescentInformation {
 		return false;
 	}
 	
-	public boolean isTimeToStopBasedOnValidationError() {
+	public boolean isTimeToStopBasedOnValidationError(boolean force) {
 		int lastIteration =  validationErrorByIteration.size() - 1;
-		if (summary.validationStoppingIteration == -1 && iterationsSinceValidationErrorImproved.get(lastIteration) == 5000) {
+		if (summary.validationStoppingIteration == -1 && (force | iterationsSinceValidationErrorImproved.get(lastIteration) == 5000)) {
 			System.out.println(String.format("Reached validation error stopping criterion after %d iterations.", 
 					validationErrorByIteration.size()));
 			summary.validationStoppingIteration = summary.minValidationErrorIteration;
@@ -162,9 +162,9 @@ public class GradientDescentInformation {
 		return false;
 	}
 	
-	public boolean isTimeToStopBasedOnGradientMagnitude() {
+	public boolean isTimeToStopBasedOnGradientMagnitude(boolean force) {
 		int lastIteration =  gradientMagnitudesByIteration.size() - 1;
-		if (summary.gradientStoppingIteration == -1 && iterationsSinceGradientMagnitudeDecreased.get(lastIteration) == 5000) {
+		if (summary.gradientStoppingIteration == -1 && (force | iterationsSinceGradientMagnitudeDecreased.get(lastIteration) == 5000)) {
 			System.out.println(String.format("Reached gradient magnitude stopping criterion after %d iterations.", 
 					gradientMagnitudesByIteration.size()));
 			summary.gradientStoppingIteration = summary.minValidationErrorIteration;
@@ -189,17 +189,16 @@ public class GradientDescentInformation {
 					+ "TrainingError\t"
 					+ "ValidationError\t"
 					+ "TestError\t"
-					+ "GradientMagnitude\t"
-					+ "Weights\n"));
+					+ "GradientMagnitude\n"));
 			for (int i = 0; i < summary.actualNumberOfIterations; i++) {
-				bw.write(String.format("%d\t%f\t%f\t%f\t%f\t%f\t%s\n", 
+				bw.write(String.format("%d\t%f\t%f\t%f\t%f\t%f\n", 
 						i, 
 						timeInSecondsUpToThisPoint.get(i), 
 						trainingErrorByIteration.get(i), 
 						validationErrorByIteration.get(i),
 						testErrorByIteration.get(i), 
-						gradientMagnitudesByIteration.get(i),
-						ExtraMatrixMethods.convertWeightsToTabSeparatedString(weightsByIteration.get(i))));
+						gradientMagnitudesByIteration.get(i)
+						/*ExtraMatrixMethods.convertWeightsToTabSeparatedString(weightsByIteration.get(i))*/));
 			}
 			bw.flush();
 			bw.close();
@@ -215,13 +214,13 @@ public class GradientDescentInformation {
 			BufferedWriter mathScript = new BufferedWriter(new PrintWriter(directory + errorCurveScriptFileName));
 			BufferedWriter latexCode = new BufferedWriter(new PrintWriter(directory + latexCodeFileName));
 			mathScript.write("\n\ntrainingList = ");
-			MathematicaListCreator.convertToMathematicaList(trainingErrorByIteration, 10, mathScript);
+			MathematicaListCreator.convertToMathematicaList(trainingErrorByIteration, 5, mathScript);
 			mathScript.write("\n\nvalidationList = ");
-			MathematicaListCreator.convertToMathematicaList(validationErrorByIteration, 10, mathScript);
+			MathematicaListCreator.convertToMathematicaList(validationErrorByIteration, 5, mathScript);
 			mathScript.write("\n\ntestList = ");
-			MathematicaListCreator.convertToMathematicaList(testErrorByIteration, 10, mathScript);
+			MathematicaListCreator.convertToMathematicaList(testErrorByIteration, 5, mathScript);
 			mathScript.write("\n\ngradientList = ");
-			MathematicaListCreator.convertToMathematicaList(gradientMagnitudesByIteration, 10, mathScript);
+			MathematicaListCreator.convertToMathematicaList(gradientMagnitudesByIteration, 5, mathScript);
 			mathScript.write("\n\ngradientStop = ");
 			mathScript.write(MathematicaListCreator.verticalLineAtXValueWithHeight(summary.gradientStoppingIteration, 1000000));
 			mathScript.write("\n\ntrainingStop = ");
@@ -235,12 +234,12 @@ public class GradientDescentInformation {
 			//printPlotCode("validationPlot", "validationList", "\"Validation Error\"", "{Darker[Blue], Opacity[0.5]}", mathScript);
 			//printPlotCode("validationPlot", "validationList, gradientStop, trainingStop, validationStop", "\"Validation Error\", \"Gradient Stop\", \"Training Stop\", \"Validation Stop\"", "{Darker[Blue], Opacity[0.5]}, {Darker[Pink]}, {Darker[Orange]}, {Darker[Magenta]}", mathScript);
 			//printPlotCode("testPlot", "testList, gradientStop, trainingStop, validationStop", "\"Test Error\", \"Gradient Stop\", \"Training Stop\", \"Validation Stop\"", "{Darker[Green], Opacity[0.5]}, {Darker[Pink]}, {Darker[Orange]}, {Darker[Magenta]}", mathScript);
-			printPlotCode("gradientPlot", "gradientList, gradientStop, trainingStop, validationStop", "\"Gradient Magnitude\", \"Gradient Stop\", \"Training Stop\", \"Validation Stop\"", "{Green}, {Pink}, {Orange}, {Cyan}", mathScript, "" + summary.maxGradientMagnitude);
+			printPlotCode("gradientPlot", "gradientList, gradientStop, trainingStop, validationStop", "\"Gradient Magnitude\", \"Gradient Stop\", \"Training Stop\", \"Validation Stop\"", "{Green}, {Pink}, {Orange}, {Blue}", mathScript, "" + summary.maxGradientMagnitude);
 			
 			
 			printPlotCode("allPlots", "trainingList, validationList, testList, gradientStop, trainingStop, validationStop", 
 					"\"Training Error\", \"Validation Error\", \"Test Error\", \"Gradient Stop\", \"Training Stop\", \"Validation Stop\"", 
-					"{Darker[Red], Opacity[0.5]}, {Darker[Blue], Opacity[0.5]}, {Darker[Green], Opacity[0.5]}, {Pink}, {Orange}, {Cyan}", mathScript);
+					"{Red, Opacity[0.85]}, {Cyan, Opacity[0.85]}, {Black, Opacity[0.85]}, {Pink}, {Orange}, {Blue}", mathScript);
 
 			//printCombinedPlotCode("allPlots", mathScript, "trainingPlot", "validationPlot", "testPlot");
 			
@@ -290,7 +289,8 @@ public class GradientDescentInformation {
 		StopWatch timer = new StopWatch().start();
 		String directory = summary.directory + "ErrorCurves/";
 		try {
-			CommandLineExecutor.runProgramAndWaitForItToComplete(directory, new String[] {"cmd", "/c", "math.exe", "-script", errorCurveScriptFileName });
+			
+			CommandLineExecutor.executeMathematicaScript(directory, errorCurveScriptFileName);
 		
 			printStatusMessage("Executed error curve script", timer);
 		} catch (Exception e) {
@@ -300,13 +300,47 @@ public class GradientDescentInformation {
 	}
 	
 	public void printPlotCode(String plotVariableName, String dataVariableName, String plotLegend, String color, BufferedWriter bw, String yMax) throws IOException {
+		String frameLabel = "";
+		if (plotVariableName.contains("gradientPlot")) {
+			frameLabel = "FrameLabel->{\"Iterations\", \"Gradient Magnitude\"}";
+		} else {
+			frameLabel = "FrameLabel->{\"Iterations\", \"RMSE\"}";
+		}
 		bw.write(plotVariableName + " = ListLinePlot[{" + dataVariableName +"}"
-				+ ", PlotLegends -> {" + plotLegend + "}"
+				//+ ", PlotLegends -> {" + plotLegend + "}"
 				+ ", PlotStyle -> {" + color + "}"
-				+ ", AxesLabel->{\"Iterations\", \"RMSE\"}"
+				//+ ", AxesLabel->{\"Iterations\", \"RMSE\"}"
 				+ ", PlotRange -> {{Automatic, Automatic}, {0, " + "Automatic" + "}}"
 				+ ", ImageSize -> Large"
+				+ ", Frame->True, FrameStyle->Black , FrameTicksStyle->Black, LabelStyle->{Black, 12}, " + frameLabel
+				+ ", PlotRangePadding->{{Scaled[0.03],Scaled[0.03]}, {Scaled[0.03], Scaled[0.03]}}"
+				+ ", ImageMargins->{{0,0},{5,5}}"
 				+ "]\n\n");
+	}
+	
+	public static void generateAndExecutePlotLegend(DatasetParameters dsParam) {
+		String gradientMagfile = Main.RESULTS_DIRECTORY + dsParam.minimalName + "/gradientDescent/gradientMagnitudeLegend";
+		String errorCurveFile = Main.RESULTS_DIRECTORY + dsParam.minimalName + "/gradientDescent/errorCurveLegend";
+		try {
+			BufferedWriter bw = new BufferedWriter(new PrintWriter(gradientMagfile + ".m"));
+			bw.append("gradientMagnitudeLegend = LineLegend[{Green, Pink, Orange, Blue}, {\"Gradient Magnitude\", \"Gradient Stop\", \"Training Stop\", \"Validation Stop\"}]\n\n");
+			bw.append("fileName = \"" + gradientMagfile  + "\"\n");
+			bw.append("Export[fileName <> \".png\", gradientMagnitudeLegend, ImageResolution -> 300]\n\n");
+			bw.flush();
+			bw.close();
+			bw = new BufferedWriter(new PrintWriter(errorCurveFile + ".m"));
+			bw.append("errorCurveLegend = LineLegend[{Red, Cyan, Black, Pink, Orange, Blue}, {\"Training Error\", \"Validation Error\", \"Test Error\", \"Gradient Stop\", \"Training Stop\", \"Validation Stop\"}]\n\n");
+			bw.append("fileName = \"" + errorCurveFile  + "\"\n");
+			bw.append("Export[fileName <> \".png\", errorCurveLegend, ImageResolution -> 300]\n\n");
+			bw.flush();
+			bw.close();
+			CommandLineExecutor.executeMathematicaScript(Main.RESULTS_DIRECTORY + dsParam.minimalName + "/gradientDescent/", "gradientMagnitudeLegend.m");
+			CommandLineExecutor.executeMathematicaScript(Main.RESULTS_DIRECTORY + dsParam.minimalName + "/gradientDescent/", "errorCurveLegend.m");
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+
 	}
 	
 	public void printPlotCode(String plotVariableName, String dataVariableName, String plotLegend, String color, BufferedWriter bw) throws IOException {
@@ -339,59 +373,76 @@ public class GradientDescentInformation {
 	
 	public static GradientDescentInformation readFromFile(GradientDescentParameters parameters) {	
 		GradientDescentInformation retval = new GradientDescentInformation(parameters);
-		retval.summary = GradientDescentSummary.readFromFile(parameters);
+		retval.summary = new GradientDescentSummary(parameters);//.readFromFile(parameters);
+		int i = 0;
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(retval.summary.directory + retval.fileName));
 			br.readLine(); // Skip the header 
-			for (int i = 0; i < retval.summary.actualNumberOfIterations; i++) {
-				String[] components = br.readLine().split("\t");
+			String line = null;
+			
+			while ((line = br.readLine()) != null) {
+			//for (int i = 0; i < retval.summary.actualNumberOfIterations; i++) {
+				String[] components = line.split("\t");
 				retval.timeInSecondsUpToThisPoint.add(Double.parseDouble(components[1]));
 				retval.addTrainingError(Double.parseDouble(components[2]));
 				retval.addValidationError(Double.parseDouble(components[3]));
 				retval.addTestError(Double.parseDouble(components[4]));
 				retval.addGradientMagnitude(Double.parseDouble(components[5]));
-				double[] weights = new double[parameters.dataset.numberOfPredictorsPlus1];
-				for (int j = 0; j < weights.length; j++) {
-					weights[j] = Double.parseDouble(components[6+j]);
-				}
+				//double[] weights = new double[parameters.dataset.numberOfPredictorsPlus1];
+				//for (int j = 0; j < weights.length; j++) {
+				//	weights[j] = Double.parseDouble(components[6+j]);
+				//}
+				i++;
 			}
 			br.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
+		retval.summary.actualNumberOfIterations = i;
+		retval.summary.timeInSeconds = retval.timeInSecondsUpToThisPoint.get(i-1);
+		retval.isTimeToStopBasedOnGradientMagnitude(true);
+		retval.isTimeToStopBasedOnTrainingError(true);
+		retval.isTimeToStopBasedOnValidationError(true);
 		return retval;
 	}
 	
-	public GradientDescentInformation averageInformation(GradientDescentParameters parameters, GradientDescentInformation... infos) {
+	public static GradientDescentInformation averageInformation(GradientDescentParameters parameters, GradientDescentInformation... infos) {
 		GradientDescentInformation retval = new GradientDescentInformation(parameters);
 		GradientDescentSummary[] summaries = new GradientDescentSummary[infos.length];
 		for (int i = 0; i < infos.length; i++) {
 			summaries[i] = infos[i].summary;
 		}
 		retval.summary = GradientDescentSummary.averageSummary(parameters, summaries);
-		SumCountAverage avgTrainingError = new SumCountAverage(), avgValidationError = new SumCountAverage(), avgTestError = new SumCountAverage(), avgGradientMagnitude = new SumCountAverage();
+		SumCountAverage avgTrainingError = new SumCountAverage(), avgValidationError = new SumCountAverage(), avgTestError = new SumCountAverage(), avgGradientMagnitude = new SumCountAverage(), avgTimeInSeconds = new SumCountAverage();
 		Matrix avgWeights = null;
-		for (GradientDescentInformation info : infos) {
-			for (int i =0; i < retval.summary.minimumIterationsAllRunsShare; i++) {
-				avgTrainingError.reset();
-				avgValidationError.reset();
-				avgTestError.reset();
-				avgWeights = new Matrix(retval.summary.initialWeights.getRowDimension(),retval.summary.initialWeights.getColumnDimension());
-				for (int runNum = 0; runNum < infos.length; runNum++) {
-					avgTrainingError.addData(info.trainingErrorByIteration.get(i));
-					avgValidationError.addData(info.validationErrorByIteration.get(i));
-					avgTestError.addData(info.testErrorByIteration.get(i));
-					avgGradientMagnitude.addData(info.gradientMagnitudesByIteration.get(i));
-					avgWeights.plusEquals(info.weightsByIteration.get(i));
-				}
-				retval.addTrainingError(avgTrainingError.getMean());
-				retval.addValidationError(avgValidationError.getMean());
-				retval.addTestError(avgTestError.getMean());
-				retval.addGradientMagnitude(avgGradientMagnitude.getMean());
-				retval.weightsByIteration.add(avgWeights.timesEquals(1.0 / infos.length));
+
+		for (int i =0; i < retval.summary.minimumIterationsAllRunsShare; i++) {
+			avgTrainingError.reset();
+			avgValidationError.reset();
+			avgTestError.reset();
+			avgTimeInSeconds.reset();
+			
+			for (GradientDescentInformation info : infos) {
+				avgTrainingError.addData(info.trainingErrorByIteration.get(i));
+				avgValidationError.addData(info.validationErrorByIteration.get(i));
+				avgTestError.addData(info.testErrorByIteration.get(i));
+				avgGradientMagnitude.addData(info.gradientMagnitudesByIteration.get(i));
+				avgTimeInSeconds.addData(info.timeInSecondsUpToThisPoint.get(i));
+				//avgWeights.plusEquals(info.weightsByIteration.get(i));
 			}
+			//retval.summary.
+			retval.addTrainingError(avgTrainingError.getMean());
+			retval.addValidationError(avgValidationError.getMean());
+			retval.addTestError(avgTestError.getMean());
+			retval.timeInSecondsUpToThisPoint.add(avgTimeInSeconds.getMean());
+			retval.addGradientMagnitude(avgGradientMagnitude.getMean());
+			//retval.weightsByIteration.add(avgWeights.timesEquals(1.0 / infos.length));
 		}
+		retval.summary.actualNumberOfIterations = retval.summary.minimumIterationsAllRunsShare;
+		retval.isTimeToStopBasedOnGradientMagnitude(true);
+		retval.isTimeToStopBasedOnTrainingError(true);
+		retval.isTimeToStopBasedOnValidationError(true);
 
 		return retval;
 	}
