@@ -23,16 +23,16 @@ import utilities.RandomSample;
 import utilities.StopWatch;
 
 public class Main {
-	public static String RESULTS_DIRECTORY = "/mnt/nfs/Austin/comp520-linearRegression/results/";
-	public static String LOCKS_DIRECTORY = "/mnt/nfs/Austin/comp520-linearRegression/locks/";
+	public static String RESULTS_DIRECTORY = System.getProperty("user.dir") + "/results/";
+	public static String LOCKS_DIRECTORY = System.getProperty("user.dir") + "/locks/";
 	private static int NUMBER_OF_RUNS = 10;
 	public static double TRAINING_SAMPLE_FRACTION = 0.8;
 	public static DatasetParameters powerPlantParameters = new DatasetParameters("powerPlant", "Power Plant", "data/PowerPlant/", "Folds5x2_pp.txt",4);
-	public static DatasetParameters nasaParameters = new DatasetParameters("nasa", "Nasa Air Foil", "data/NASAAirFoild/", "data.txt",5);
-	public static DatasetParameters bikeSharingDayParameters = new DatasetParameters("bikeSharingDay", "Bike Sharing By Day", "data/BikeSharing/", "bikeSharing.txt",11);
-	public static DatasetParameters crimeCommunitiesParameters = new DatasetParameters("crimeCommunities", "Crime Communities", "data/CrimeCommunities/", "communitiesOnlyPredictive.txt",122);
-	public static DatasetParameters abdominalCircumference = new DatasetParameters("ac", "Abdominal Circumference", "data/AbdominalCircumference/", "ac.txt",1);
-	public static DatasetParameters simpleLine = new DatasetParameters("line", "Simple Line", "data/AbdominalCircumference/", "line.txt",1);
+	//public static DatasetParameters nasaParameters = new DatasetParameters("nasa", "Nasa Air Foil", "data/NASAAirFoild/", "data.txt",5);
+	//public static DatasetParameters bikeSharingDayParameters = new DatasetParameters("bikeSharingDay", "Bike Sharing By Day", "data/BikeSharing/", "bikeSharing.txt",11);
+	//public static DatasetParameters crimeCommunitiesParameters = new DatasetParameters("crimeCommunities", "Crime Communities", "data/CrimeCommunities/", "communitiesOnlyPredictive.txt",122);
+	//public static DatasetParameters abdominalCircumference = new DatasetParameters("ac", "Abdominal Circumference", "data/AbdominalCircumference/", "ac.txt",1);
+	//public static DatasetParameters simpleLine = new DatasetParameters("line", "Simple Line", "data/AbdominalCircumference/", "line.txt",1);
 	public static DatasetParameters[] datasets = new DatasetParameters[] {/*simpleLine, /*abdominalCircumference, nasaParameters,*/ powerPlantParameters /*, crimeCommunitiesParameters*/};
 	public static UpdateRule[] updateRules = new UpdateRule[] {UpdateRule.GradientMag, UpdateRule.Original, UpdateRule.AdaptedLR};
 	public static double[] learningRates = new double[] {0.0001, 0.001, 0.01, 0.1, .5, 1};
@@ -44,10 +44,8 @@ public class Main {
 	public static Queue<Future<Void>> futureQueue = new LinkedList<Future<Void>>();
 	
 	public static void main(String[] args) {
-		LatexResultsGenerator.writeEntireResultsSection(powerPlantParameters);
-		
-		generateDerivativeSolverRunData();
-		generateLearningCurveForDerivativeSolvers();
+		//generateDerivativeSolverRunData();
+		//generateLearningCurveForDerivativeSolvers();
 
 		generateGradientDescentRunData();
 		averageGradientDescentRunData();
@@ -420,7 +418,7 @@ public class Main {
 		}				
 		runTimer.printMessageWithTime("Finished reading gradient descent learning curve entries " + 0);
 		
-		generateGenericLearningCurve(dsParam, entries, "gradientDesenctLearningCurve", "gradientDescentLearningCurve-" + generalParams.fileNamePrefix);
+		generateGenericLearningCurve(dsParam, entries, "gradientDescentLearningCurve", "gradientDescentLearningCurve-" + generalParams.fileNamePrefix);
 	}
 	
 	public static void generateAndExecuteLearningCurveLegend(DatasetParameters dsParam) {

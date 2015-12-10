@@ -171,7 +171,7 @@ public class LatexResultsGenerator {
 				original.append("\t\t\\includegraphics{{" + (directory + "ErrorCurves/gradientPlot")  + "}.png}\n");
 				original.append("\t}\n");
 				original.append("\t\\resizebox{0.32\\linewidth}{!}{\n");
-				original.append("\t\t\\includegraphics{{" + (Main.RESULTS_DIRECTORY + datasetParams.minimalName + "/gradientDesenctLearningCurve/" + learningCurveFileName)  + "}.png}\n");
+				original.append("\t\t\\includegraphics{{" + (Main.RESULTS_DIRECTORY + datasetParams.minimalName + "/gradientDescentLearningCurve/" + learningCurveFileName)  + "}.png}\n");
 				original.append("\t}\n");
 				
 				originalErrorCurveDone = true;
@@ -184,7 +184,7 @@ public class LatexResultsGenerator {
 				adaptedLr.append("\t\t\\includegraphics{{" + (directory + "ErrorCurves/gradientPlot")  + "}.png}\n");
 				adaptedLr.append("\t}\n");
 				adaptedLr.append("\t\\resizebox{0.32\\linewidth}{!}{\n");
-				adaptedLr.append("\t\t\\includegraphics{{" + (Main.RESULTS_DIRECTORY + datasetParams.minimalName + "/gradientDesenctLearningCurve/" + learningCurveFileName)  + "}.png}\n");
+				adaptedLr.append("\t\t\\includegraphics{{" + (Main.RESULTS_DIRECTORY + datasetParams.minimalName + "/gradientDescentLearningCurve/" + learningCurveFileName)  + "}.png}\n");
 				adaptedLr.append("\t}\n");
 				
 				adaptedLrErrorCurveDone = true;
@@ -197,7 +197,7 @@ public class LatexResultsGenerator {
 				gradientMag.append("\t\t\\includegraphics{{" + (directory + "ErrorCurves/gradientPlot")  + "}.png}\n");
 				gradientMag.append("\t}\n");
 				gradientMag.append("\t\\resizebox{0.32\\linewidth}{!}{\n");
-				gradientMag.append("\t\t\\includegraphics{{" + (Main.RESULTS_DIRECTORY + datasetParams.minimalName + "/gradientDesenctLearningCurve/" + learningCurveFileName)  + "}.png}\n");
+				gradientMag.append("\t\t\\includegraphics{{" + (Main.RESULTS_DIRECTORY + datasetParams.minimalName + "/gradientDescentLearningCurve/" + learningCurveFileName)  + "}.png}\n");
 				gradientMag.append("\t}\n");
 				gradientMagErrorCurveDone = true;
 			}
